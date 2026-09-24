@@ -1,4 +1,4 @@
-# 🌸 Anima Agent Studio (中文版说明)
+# 🌸 Image Agent Studio (中文版说明)
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![ComfyUI Compatible](https://img.shields.io/badge/ComfyUI-API%20Engine-brightgreen.svg)](https://github.com/comfyanonymous/ComfyUI)
@@ -6,7 +6,7 @@
 
 > [English Documentation](./README.md) | **中文文档**
 
-**Anima Agent Studio** 是一个专为消费级显卡（如 RTX 4080 16GB）设计的下一代 AI 生图智能体工作台。
+**Image Agent Studio** 是一个专为消费级显卡（如 RTX 4080 16GB）设计的下一代 AI 生图智能体工作台。
 
 它通过**智能显存接力（Strict VRAM Handover）**机制，将**本地多模态大语言模型（如 Heretic Qwen 3.8 27B）**与 **ComfyUI 顶尖生图引擎**无缝融合，原生支持两大旗舰级工作流：
 1. **✨ Qwen-Image 2.1 进阶引擎 (SevnFading Advanced)**：支持全中文自然语言对话出图、多模态看图改图、局部属性解耦精准编辑（文生图 / 图生图）。
@@ -32,7 +32,7 @@
 
 如果你正在使用 AI 编程助手（Claude Code, Antigravity, Codex, Cursor 等），直接向它发送以下提示词即可：
 
-> **“请读取本项目中的 [AGENT_INSTRUCTIONS.md](./AGENT_INSTRUCTIONS.md)，帮我在本地自动检查并安装所需的 ComfyUI 节点，校验模型与 LoRA，配置好 config.json 并启动 Anima Agent Studio。”**
+> **“请读取本项目中的 [AGENT_INSTRUCTIONS.md](./AGENT_INSTRUCTIONS.md)，帮我在本地自动检查并安装所需的 ComfyUI 节点，校验模型与 LoRA，配置好 config.json 并启动 Image Agent Studio。”**
 
 Agent 会自动根据清单完成环境探测、节点克隆以及模型校验。
 
@@ -42,8 +42,8 @@ Agent 会自动根据清单完成环境探测、节点克隆以及模型校验�
 
 ### 1. 克隆本仓库并安装依赖
 ```bash
-git clone https://github.com/G0K0U/Anima-Agent-Studio.git
-cd Anima-Agent-Studio
+git clone https://github.com/G0K0U/Image-Agent-Studio.git
+cd Image-Agent-Studio
 pip install -r requirements.txt
 ```
 

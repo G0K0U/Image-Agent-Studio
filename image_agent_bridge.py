@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Anima Agent Bridge: Uses Local LLM (e.g., Heretic Qwen 3.8 27B / llama.cpp / Ollama)
+Image Agent Bridge: Uses Local LLM (e.g., Heretic Qwen 3.8 27B / llama.cpp / Ollama)
 to plan prompts and parameters with automatic VRAM handover.
 
 Supports dual workflow modes:

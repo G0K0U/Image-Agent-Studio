@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Model Manifest & Downloader for Anima Agent Studio
+Model Manifest & Downloader for Image Agent Studio
 Inspects local ComfyUI models directory, identifies missing checkpoints/LoRAs,
 and provides direct download links and commands.
 """
@@ -126,7 +126,7 @@ MODELS_MANIFEST = {
 
 def check_models(base_models_dir):
     print("==================================================")
-    print(" 📦 Anima Agent Studio: Model Manifest & Verification")
+    print(" 📦 Image Agent Studio: Model Manifest & Verification")
     print(f" Checking base directory: {base_models_dir}")
     print("==================================================")
 

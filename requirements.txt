@@ -1,4 +1,4 @@
-# Core dependencies for Anima Agent Studio
+# Core dependencies for Image Agent Studio
 # Python 3.10+ recommended
 
 requests>=2.31.0

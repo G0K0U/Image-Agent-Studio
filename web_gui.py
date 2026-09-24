@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Anima Agent Studio: Dual-Workflow Web GUI
+Image Agent Studio: Dual-Workflow Web GUI
 Supports:
   1. Qwen-Image 2.1 Advanced (Text-to-Image / Image-to-Image / Local Editing)
   2. Anima AIO Yuri (SDXL Anime Specialization + LoRA Stacking)
@@ -23,15 +23,15 @@ import urllib.error
 import urllib.parse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-import anima_agent_bridge
+import image_agent_bridge
 
-CONFIG = anima_agent_bridge.get_config()
+CONFIG = image_agent_bridge.get_config()
 
 HTML_CONTENT = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>Anima Agent Studio - Dual-Engine AI Workspace</title>
+  <title>Image Agent Studio - Dual-Engine AI Workspace</title>
   <style>
     :root {
       --bg: #0b0d13;
@@ -79,7 +79,7 @@ HTML_CONTENT = """<!DOCTYPE html>
 <body>
   <div class="container">
     <header>
-      <h1>🌸 Anima Agent Studio <span id="curEnginePill" class="workflow-pill pill-qwen">Qwen-Image 2.1</span></h1>
+      <h1>🌸 Image Agent Studio <span id="curEnginePill" class="workflow-pill pill-qwen">Qwen-Image 2.1</span></h1>
       <div class="badges">
         <span class="badge">🧠 LLM Agent (Prompt Planner)</span>
         <span class="badge badge-vram">⚡ ComfyUI (100% Dedicated VRAM)</span>
@@ -153,7 +153,7 @@ HTML_CONTENT = """<!DOCTYPE html>
 
       <div class="card">
         <div class="card-title">📜 Execution Logs / 实时调度日志</div>
-        <div class="status-box" id="logBox">[System] Anima Agent Studio Ready.</div>
+        <div class="status-box" id="logBox">[System] Image Agent Studio Ready.</div>
       </div>
     </div>
 
@@ -366,7 +366,7 @@ HTML_CONTENT = """<!DOCTYPE html>
 """
 
 def get_status_for_workflow(wf="qwen", has_image=None):
-    cfg = anima_agent_bridge.get_config()
+    cfg = image_agent_bridge.get_config()
     status = {"prompt": "", "negative_prompt": "", "steps": 40 if wf == "qwen" else 28, "cfg": 1.0 if wf == "qwen" else 4.0, "denoise": 0.55, "wh_ratio": "2:3", "seed": -1, "active_loras": [], "latest_image": None}
     
     if wf == "qwen":
@@ -395,7 +395,7 @@ def get_status_for_workflow(wf="qwen", has_image=None):
                 if "5" in d:
                     w = d["5"].get("inputs", {}).get("width", 832)
                     h = d["5"].get("inputs", {}).get("height", 1216)
-                    for r, (rw, rh) in anima_agent_bridge.WH_RATIO_MAP.items():
+                    for r, (rw, rh) in image_agent_bridge.WH_RATIO_MAP.items():
                         if rw == w and rh == h:
                             status["wh_ratio"] = r
                             break
@@ -441,7 +441,7 @@ class StudioHandler(BaseHTTPRequestHandler):
         return
 
     def do_HEAD(self):
-        cfg = anima_agent_bridge.get_config()
+        cfg = image_agent_bridge.get_config()
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path.startswith('/api/view_image/'):
             filename = os.path.basename(parsed.path)
@@ -457,7 +457,7 @@ class StudioHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        cfg = anima_agent_bridge.get_config()
+        cfg = image_agent_bridge.get_config()
         parsed = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(parsed.query)
         if parsed.path in ('/', '/index.html'):
@@ -496,7 +496,7 @@ class StudioHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def do_POST(self):
-        cfg = anima_agent_bridge.get_config()
+        cfg = image_agent_bridge.get_config()
         comfy_api = cfg["comfy_api_url"]
         input_dir = cfg["comfy_input_dir"]
         output_dir = cfg["comfy_output_dir"]
@@ -524,16 +524,16 @@ class StudioHandler(BaseHTTPRequestHandler):
 
                 print(f"[Studio] Calling LLM Agent for [{wf.upper()}] with instruction: {instruction}")
                 try:
-                    anima_agent_bridge.start_heretic()
-                    params = anima_agent_bridge.query_heretic(instruction, temp_img_path, workflow=wf)
+                    image_agent_bridge.start_heretic()
+                    params = image_agent_bridge.query_heretic(instruction, temp_img_path, workflow=wf)
                     print(f"[Studio] LLM planned: {json.dumps(params, ensure_ascii=False)}")
                     if wf == "qwen":
-                        anima_agent_bridge.apply_to_qwen_workflow(params, saved_filename)
+                        image_agent_bridge.apply_to_qwen_workflow(params, saved_filename)
                     else:
-                        anima_agent_bridge.apply_to_anima_workflow(params, saved_filename)
+                        image_agent_bridge.apply_to_anima_workflow(params, saved_filename)
                 finally:
                     print("[Studio] Releasing LLM from VRAM handover...")
-                    anima_agent_bridge.kill_heretic()
+                    image_agent_bridge.kill_heretic()
 
                 status = get_status_for_workflow(wf, has_image=bool(saved_filename))
                 res_data = {"status": "success", "args": status}
@@ -599,8 +599,8 @@ class StudioHandler(BaseHTTPRequestHandler):
                         
                     # Handle resolution from ratio
                     ratio = data.get("ratio_or_denoise", "2:3")
-                    if ratio in anima_agent_bridge.WH_RATIO_MAP and "5" in graph:
-                        w, h = anima_agent_bridge.WH_RATIO_MAP[ratio]
+                    if ratio in image_agent_bridge.WH_RATIO_MAP and "5" in graph:
+                        w, h = image_agent_bridge.WH_RATIO_MAP[ratio]
                         graph["5"]["inputs"]["width"] = w
                         graph["5"]["inputs"]["height"] = h
 
@@ -706,11 +706,11 @@ class StudioHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"status": "error", "error": str(e)}).encode('utf-8'))
 
 def run_server():
-    cfg = anima_agent_bridge.get_config()
+    cfg = image_agent_bridge.get_config()
     port = int(cfg.get("studio_port", 7860))
     server = HTTPServer(('127.0.0.1', port), StudioHandler)
     print(f"============================================================")
-    print(f" Anima Agent Studio GUI Running at http://127.0.0.1:{port}")
+    print(f" Image Agent Studio GUI Running at http://127.0.0.1:{port}")
     print(f" Supporting: Qwen-Image 2.1 Advanced & Anima AIO Yuri")
     print(f"============================================================")
     server.serve_forever()

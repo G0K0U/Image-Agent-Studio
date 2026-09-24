@@ -1,4 +1,4 @@
-# 🌸 Anima Agent Studio
+# 🌸 Image Agent Studio
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![ComfyUI Compatible](https://img.shields.io/badge/ComfyUI-API%20Engine-brightgreen.svg)](https://github.com/comfyanonymous/ComfyUI)
@@ -11,7 +11,7 @@
 
 # 📖 English Documentation
 
-**Anima Agent Studio** is a next-generation AI image generation workspace tailored for consumer GPUs (e.g., RTX 4080 16GB VRAM).
+**Image Agent Studio** is a next-generation AI image generation workspace tailored for consumer GPUs (e.g., RTX 4080 16GB VRAM).
 
 It bridges a **local Vision-Language LLM Agent (e.g., Heretic Qwen 3.8 27B / llama.cpp / Ollama)** with the **ComfyUI generation backend** through an automated **Strict VRAM Handover** mechanism, providing native support for two flagship workflows:
 
@@ -23,7 +23,7 @@ It bridges a **local Vision-Language LLM Agent (e.g., Heretic Qwen 3.8 27B / lla
 ## ⚡ Key Highlights
 
 - **Strict VRAM Handover (Zero GPU Memory Contention)**:
-  On 16GB GPUs, running a 27B LLM alongside diffusion models causes Out-Of-Memory (OOM) errors. Anima Agent Studio boots the LLM on-demand with short context (`-c 4096`), completes reasoning and workflow parameter planning in ~5 seconds, and **immediately unloads the LLM**, granting 100% of GPU VRAM exclusively to ComfyUI for generation.
+  On 16GB GPUs, running a 27B LLM alongside diffusion models causes Out-Of-Memory (OOM) errors. Image Agent Studio boots the LLM on-demand with short context (`-c 4096`), completes reasoning and workflow parameter planning in ~5 seconds, and **immediately unloads the LLM**, granting 100% of GPU VRAM exclusively to ComfyUI for generation.
 - **Dual-Engine Prompt Optimization**:
   - **Qwen Mode**: Expands simple natural language into cinematic photographic descriptions (camera lens, depth-of-field, lighting, textures) and performs visual attribute disentanglement for precision editing.
   - **Anima Mode**: Expands prompts into Danbooru-style tag syntax with negative suppression and automatic LoRA weighting.
@@ -38,7 +38,7 @@ It bridges a **local Vision-Language LLM Agent (e.g., Heretic Qwen 3.8 27B / lla
 
 If you are using an AI Coding Assistant (**Claude Code, Antigravity, Codex, Cursor, RooCode**), simply paste this instruction to your agent:
 
-> **"Please read [AGENT_INSTRUCTIONS.md](./AGENT_INSTRUCTIONS.md) and deploy Anima Agent Studio. Automatically check and install required ComfyUI custom nodes, inspect and guide downloading required weights and LoRAs, initialize `config.json`, and launch the web studio."**
+> **"Please read [AGENT_INSTRUCTIONS.md](./AGENT_INSTRUCTIONS.md) and deploy Image Agent Studio. Automatically check and install required ComfyUI custom nodes, inspect and guide downloading required weights and LoRAs, initialize `config.json`, and launch the web studio."**
 
 The agent will execute the verified deployment protocol autonomously.
 
@@ -48,8 +48,8 @@ The agent will execute the verified deployment protocol autonomously.
 
 ### 1. Clone Repository & Install Python Dependencies
 ```bash
-git clone https://github.com/G0K0U/Anima-Agent-Studio.git
-cd Anima-Agent-Studio
+git clone https://github.com/G0K0U/Image-Agent-Studio.git
+cd Image-Agent-Studio
 pip install -r requirements.txt
 ```
 
@@ -113,7 +113,7 @@ All templates reside in the `workflows/` directory:
 
 # 🌸 中文文档 (Chinese Documentation)
 
-**Anima Agent Studio** 是一个专为消费级显卡（如 RTX 4080 16GB）设计的下一代 AI 生图智能体工作台。
+**Image Agent Studio** 是一个专为消费级显卡（如 RTX 4080 16GB）设计的下一代 AI 生图智能体工作台。
 
 它通过**智能显存接力（Strict VRAM Handover）**机制，将**本地多模态大语言模型（如 Heretic Qwen 3.8 27B）**与 **ComfyUI 顶尖生图引擎**无缝融合，原生支持两大旗舰级工作流：
 1. **✨ Qwen-Image 2.1 进阶引擎 (SevnFading Advanced)**：支持全中文自然语言对话出图、多模态看图改图、局部属性解耦精准编辑（文生图 / 图生图）。
@@ -139,7 +139,7 @@ All templates reside in the `workflows/` directory:
 
 向你的 AI 编程助手发送：
 
-> **“请读取本项目中的 [AGENT_INSTRUCTIONS.md](./AGENT_INSTRUCTIONS.md)，帮我在本地自动检查并安装所需的 ComfyUI 节点，校验模型与 LoRA，配置好 config.json 并启动 Anima Agent Studio。”**
+> **“请读取本项目中的 [AGENT_INSTRUCTIONS.md](./AGENT_INSTRUCTIONS.md)，帮我在本地自动检查并安装所需的 ComfyUI 节点，校验模型与 LoRA，配置好 config.json 并启动 Image Agent Studio。”**
 
 ---
 
@@ -147,8 +147,8 @@ All templates reside in the `workflows/` directory:
 
 ### 1. 克隆与安装依赖
 ```bash
-git clone https://github.com/G0K0U/Anima-Agent-Studio.git
-cd Anima-Agent-Studio
+git clone https://github.com/G0K0U/Image-Agent-Studio.git
+cd Image-Agent-Studio
 pip install -r requirements.txt
 ```
 

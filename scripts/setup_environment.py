@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Automated Environment Setup Script for Anima Agent Studio
+Automated Environment Setup Script for Image Agent Studio
 Designed for 1-click execution by AI Agents (Claude Code, Antigravity, Codex) or users.
 """
 
@@ -88,12 +88,12 @@ def create_config(comfy_dir):
         print(f"\n[2/3] config.json already exists.")
 
 def main():
-    parser = argparse.ArgumentParser(description="Anima Agent Studio Environment Setup")
+    parser = argparse.ArgumentParser(description="Image Agent Studio Environment Setup")
     parser.add_argument("--comfy-dir", help="Path to your ComfyUI root directory")
     args = parser.parse_args()
 
     print("==================================================")
-    print(" 🚀 Anima Agent Studio: 1-Click Environment Setup")
+    print(" 🚀 Image Agent Studio: 1-Click Environment Setup")
     print("==================================================")
 
     comfy_dir = find_comfyui(args.comfy_dir)
@@ -109,7 +109,7 @@ def main():
     print("\n[3/3] Next steps:")
     print("  1. Run `python scripts/download_models.py` to inspect and download required weights & LoRAs.")
     print("  2. Start ComfyUI on port 8191 (or configure `comfy_api_url` in config.json).")
-    print("  3. Start Anima Agent Studio: `python web_gui.py`.")
+    print("  3. Start Image Agent Studio: `python web_gui.py`.")
     print("==================================================")
 
 if __name__ == "__main__":

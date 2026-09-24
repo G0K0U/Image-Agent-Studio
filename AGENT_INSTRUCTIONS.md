@@ -3,7 +3,7 @@
 This document is specifically crafted for **Autonomous AI Coding Agents** (such as Claude Code, Google Antigravity, OpenAI Codex, Cursor, RooCode).
 
 When a user provides this repository and asks you to:
-> *"Deploy this repo, install all required ComfyUI nodes, download models and LoRAs, configure the LLM prompt planner, and start Anima Agent Studio."*
+> *"Deploy this repo, install all required ComfyUI nodes, download models and LoRAs, configure the LLM prompt planner, and start Image Agent Studio."*
 
 Follow the exact automated execution playbook below.
 
@@ -66,7 +66,7 @@ python scripts/download_models.py --models-dir <path_to_comfyui/models>
 ---
 
 ### Step 3: Configure Local LLM Prompt Agent (VRAM Handover)
-Anima Agent Studio supports two modes for prompt planning:
+Image Agent Studio supports two modes for prompt planning:
 
 #### Option A: External OpenAI-compatible Endpoint (Default & Easiest)
 If user has Ollama, vLLM, LM Studio, or a running `llama-server`:
