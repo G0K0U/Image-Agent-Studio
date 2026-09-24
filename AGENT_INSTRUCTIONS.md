@@ -9,7 +9,7 @@ Follow the exact automated execution playbook below.
 
 ---
 
-## 📋 Execution Playbook for AI Agents
+## 📋 Execution Playbook for AI Agents (English)
 
 ### Step 1: Detect ComfyUI & Setup Custom Nodes
 Run the automated environment installer:
@@ -107,3 +107,32 @@ Configure `config.json`:
      ```
    - Make a test POST request to `http://127.0.0.1:7860/api/generate` with `{"workflow": "qwen"}`.
    - Confirm status returns `"success"` and returns a valid image URL.
+
+---
+
+# 🇨🇳 中文部署操作指南 (Chinese Version)
+
+本指南专为自主 AI 编程智能体（Claude Code, Antigravity, Codex, Cursor, RooCode 等）设计。
+
+当用户要求部署本项目时，请按照以下标准化流程执行：
+
+### 步骤 1：探测 ComfyUI 环境并安装节点
+```bash
+python scripts/setup_environment.py --comfy-dir <ComfyUI路径>
+```
+脚本会自动探测或指定 ComfyUI 根目录，并将 11 个必需节点克隆到 `custom_nodes/` 下，同时生成 `config.json`。
+
+### 步骤 2：校验并下载模型与 LoRA 权重
+```bash
+python scripts/download_models.py --models-dir <ComfyUI/models路径>
+```
+根据输出的 `huggingface-cli` 命令下载缺失的模型。
+
+### 步骤 3：配置提示词 LLM 大模型（显存接力）
+- 若已有运行中的本地/远程 OpenAI 兼容接口，配置 `heretic_api_url` 即可。
+- 若为 RTX 4080 (16GB) 单卡，建议配置 `heretic_runtime_exe` 与 `heretic_model_path`，启用全自动显存接力（推理完成后秒卸载，不抢 ComfyUI 显存）。
+
+### 步骤 4：启动与端到端验证
+1. 启动 ComfyUI 确保监听 `http://127.0.0.1:8191`。
+2. 运行 `python web_gui.py` 启动控制台（监听 7860 端口）。
+3. 执行文生图 Smoke Test 确认返回渲染成图。

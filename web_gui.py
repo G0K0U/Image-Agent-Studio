@@ -31,7 +31,7 @@ HTML_CONTENT = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>Anima Agent Studio - 双工作流智能控制台</title>
+  <title>Anima Agent Studio - Dual-Engine AI Workspace</title>
   <style>
     :root {
       --bg: #0b0d13;
@@ -81,42 +81,42 @@ HTML_CONTENT = """<!DOCTYPE html>
     <header>
       <h1>🌸 Anima Agent Studio <span id="curEnginePill" class="workflow-pill pill-qwen">Qwen-Image 2.1</span></h1>
       <div class="badges">
-        <span class="badge">🧠 本地 LLM (极速推理与提示词规划)</span>
-        <span class="badge badge-vram">⚡ ComfyUI (100% 独立显存生图)</span>
+        <span class="badge">🧠 LLM Agent (Prompt Planner)</span>
+        <span class="badge badge-vram">⚡ ComfyUI (100% Dedicated VRAM)</span>
       </div>
     </header>
 
     <div class="sidebar">
       <div class="card">
-        <div class="card-title">🎯 目标工作流引擎</div>
+        <div class="card-title">🎯 Target Engine / 目标工作流引擎</div>
         <select id="wfSelect" onchange="onWorkflowChange()" style="font-weight: 600; font-size: 13px; color: #38bdf8;">
-          <option value="qwen" selected>✨ Qwen-Image 2.1 进阶 (文生图 / 图生图 / 图像编辑)</option>
-          <option value="anima">🌸 Anima AIO Yuri (SDXL 动漫专精 + LoRA 堆叠)</option>
+          <option value="qwen" selected>✨ Qwen-Image 2.1 Advanced (T2I / I2I / Local Edit)</option>
+          <option value="anima">🌸 Anima AIO Yuri (SDXL Anime + LoRA Stack)</option>
         </select>
 
-        <div class="card-title" style="margin-top: 14px;">🤖 自然语言指令 / 多模态看图改图</div>
-        <textarea id="instruction" rows="3" placeholder="例如：赛博朋克霓虹街道上撑着雨伞的银发猫耳少女，超高清细节，电影级光影"></textarea>
+        <div class="card-title" style="margin-top: 14px;">🤖 Prompt Instruction / Vision Edit / 自然语言指令</div>
+        <textarea id="instruction" rows="3" placeholder="e.g. A hyper-realistic cyberpunk street with neon reflections, silver-haired anime girl with translucent umbrella, cinematic lighting..."></textarea>
         
         <div style="margin-bottom: 10px;">
-          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">参考底图（上传则自动进入【图生图/图像编辑】模式，不传为【文生图】）：</label>
+          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">Reference Image / 参考底图 (Optional for I2I / Local Editing):</label>
           <div style="display: flex; align-items: center;">
             <img id="refThumb" class="thumb-preview" style="display: none;">
             <input type="file" id="refImage" accept="image/*" style="font-size: 12px; padding: 6px; margin-bottom: 0;">
-            <button id="btnClearImg" onclick="clearImage()" style="width: auto; padding: 6px 10px; margin-left: 6px; font-size: 11px; background: #334155; display: none;">清除</button>
+            <button id="btnClearImg" onclick="clearImage()" style="width: auto; padding: 6px 10px; margin-left: 6px; font-size: 11px; background: #334155; display: none;">Clear / 清除</button>
           </div>
         </div>
 
-        <button id="btnPlan" onclick="sendToAgent()">✨ Agent 规划并写入工作流</button>
+        <button id="btnPlan" onclick="sendToAgent()">✨ Plan Workflow with Agent / 智能规划写入</button>
       </div>
 
       <div class="card">
         <div class="card-title">
-          <span>⚙️ 当前工作流参数控制板</span>
-          <button style="width: auto; padding: 2px 8px; font-size: 11px; background: transparent; border: 1px solid var(--border);" onclick="fetchStatus()">刷新读取</button>
+          <span>⚙️ Workflow Parameters / 参数控制板</span>
+          <button style="width: auto; padding: 2px 8px; font-size: 11px; background: transparent; border: 1px solid var(--border);" onclick="fetchStatus()">Refresh / 刷新</button>
         </div>
         <div class="param-grid">
           <div class="param-item">
-            <label>采样步数 (Steps)</label>
+            <label>Sampling Steps / 步数</label>
             <input type="number" id="pSteps">
           </div>
           <div class="param-item">
@@ -124,50 +124,50 @@ HTML_CONTENT = """<!DOCTYPE html>
             <input type="number" id="pCFG" step="0.1">
           </div>
           <div class="param-item">
-            <label id="lblRatioOrDenoise">画幅比例 (Ratio) / 去噪 (Denoise)</label>
+            <label id="lblRatioOrDenoise">Aspect Ratio / 画幅比例</label>
             <input type="text" id="pRatioOrDenoise">
           </div>
           <div class="param-item">
-            <label>随机种子 (Seed, -1 为随机)</label>
+            <label>Seed / 随机种子 (-1 = Random)</label>
             <input type="text" id="pSeed">
           </div>
         </div>
 
         <div style="margin-top: 10px;">
-          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">正向提示词 (Prompt)</label>
+          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">Positive Prompt / 正向提示词</label>
           <textarea id="pPrompt" rows="4"></textarea>
         </div>
 
         <div id="negPromptSection" style="margin-top: 5px; display: none;">
-          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">负向提示词 (Negative Prompt)</label>
+          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">Negative Prompt / 负向提示词</label>
           <textarea id="pNegPrompt" rows="3"></textarea>
         </div>
 
         <div id="loraSection" style="margin-top: 5px; font-size: 12px; color: #a5b4fc; display: none;">
-          <span style="color: var(--muted); font-size: 11px; display: block; margin-bottom: 4px;">当前挂载的 LoRA 列表:</span>
-          <div id="pLoras" style="background: #0b0d13; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-family: monospace;">无</div>
+          <span style="color: var(--muted); font-size: 11px; display: block; margin-bottom: 4px;">Active LoRA Stack / 挂载的 LoRA 列表:</span>
+          <div id="pLoras" style="background: #0b0d13; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-family: monospace;">None</div>
         </div>
 
-        <button id="btnGen" class="btn-generate" onclick="triggerGenerate()">🚀 一键调用 ComfyUI 渲染生成</button>
+        <button id="btnGen" class="btn-generate" onclick="triggerGenerate()">🚀 Render with ComfyUI / 一键调用渲染生成</button>
       </div>
 
       <div class="card">
-        <div class="card-title">📜 实时通信与调度日志</div>
-        <div class="status-box" id="logBox">[System] Anima Agent Studio 已启动就绪。</div>
+        <div class="card-title">📜 Execution Logs / 实时调度日志</div>
+        <div class="status-box" id="logBox">[System] Anima Agent Studio Ready.</div>
       </div>
     </div>
 
     <div class="preview-area">
       <div class="card" style="height: 100%; display: flex; flex-direction: column;">
         <div class="card-title">
-          <span>🖼️ 高清成图实时预览</span>
-          <span id="genInfo" style="font-size: 12px; color: var(--muted);">等待渲染</span>
+          <span>🖼️ Generation Preview / 成图预览</span>
+          <span id="genInfo" style="font-size: 12px; color: var(--muted);">Waiting / 等待渲染</span>
         </div>
         <div class="preview-container">
           <div id="placeholderText" class="placeholder">
             <svg style="width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-            <p>输入自然语言指令或上传参考图</p>
-            <p style="font-size: 11px; margin-top: 4px; color: #64748b;">点击生成后，GPU 将全力独占显存渲染</p>
+            <p>Enter instructions or upload a reference image</p>
+            <p style="font-size: 11px; margin-top: 4px; color: #64748b;">GPU will render with 100% dedicated VRAM</p>
           </div>
           <img id="resultImage" class="preview-img" style="display: none;" onclick="window.open(this.src)">
         </div>
