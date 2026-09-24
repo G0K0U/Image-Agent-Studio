@@ -1,0 +1,17 @@
+{
+  "comfy_api_url": "http://127.0.0.1:8191",
+  "comfy_input_dir": "./ComfyUI/input",
+  "comfy_output_dir": "./ComfyUI/output",
+  "studio_port": 7860,
+  "heretic_api_url": "http://127.0.0.1:18200/v1/chat/completions",
+  "heretic_model_name": "Qwen3.8-27B-Heretic-Ara-iq4_xs-3.0-mtp.gguf",
+  "heretic_runtime_exe": "",
+  "heretic_model_path": "",
+  "heretic_mmproj_path": "",
+  "heretic_threads": 8,
+  "heretic_ctx_size": 4096,
+  "heretic_gpu_layers": 99,
+  "qwen_t2i_workflow": "workflows/qwen-image-2.1-t2i-template.json",
+  "qwen_i2i_workflow": "workflows/qwen-image-2.1-i2i-template.json",
+  "anima_workflow": "workflows/anima-yuri-aio-template.json"
+}

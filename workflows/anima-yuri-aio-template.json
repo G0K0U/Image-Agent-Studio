@@ -1,0 +1,1128 @@
+{
+  "118": {
+    "inputs": {
+      "seed": 0,
+      "steps": 28,
+      "cfg": 4.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 0.55,
+      "model": [
+        "121",
+        1
+      ],
+      "positive": [
+        "121",
+        4
+      ],
+      "negative": [
+        "121",
+        5
+      ],
+      "latent_image": [
+        "121",
+        6
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "119": {
+    "inputs": {
+      "samples": [
+        "118",
+        0
+      ],
+      "vae": [
+        "121",
+        3
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "121": {
+    "inputs": {
+      "base_ctx": [
+        "513:504",
+        0
+      ]
+    },
+    "class_type": "Context (rgthree)",
+    "_meta": {
+      "title": "Context (rgthree)"
+    }
+  },
+  "1347": {
+    "inputs": {
+      "value": "(masterpiece, best quality, amazing quality, very aesthetic, extremely detailed, very detailed, absurdres, newest, highres, score_9, score_8, year 2024, newest,),"
+    },
+    "class_type": "String",
+    "_meta": {
+      "title": "Anima首选质量词条"
+    }
+  },
+  "1348": {
+    "inputs": {
+      "value": "worst quality, low quality, deviantart, ye-pop, blurry, jpeg artifacts, sepia, shiny skin, ribs, dark-skinned male, interracial, "
+    },
+    "class_type": "String",
+    "_meta": {
+      "title": "负面"
+    }
+  },
+  "1350": {
+    "inputs": {
+      "value": ""
+    },
+    "class_type": "String",
+    "_meta": {
+      "title": "画师串1（临时存放）"
+    }
+  },
+  "1351": {
+    "inputs": {
+      "value": ""
+    },
+    "class_type": "String",
+    "_meta": {
+      "title": "画师串2（临时存放）"
+    }
+  },
+  "1381": {
+    "inputs": {
+      "PowerLoraLoaderHeaderWidget": {
+        "type": "PowerLoraLoaderHeaderWidget"
+      },
+      "lora_1": {
+        "on": false,
+        "lora": "Anima\\Anima-半写实动漫.safetensors",
+        "strength": 0.7
+      },
+      "lora_2": {
+        "on": false,
+        "lora": "Anima\\人物\\ds_whalemaid.safetensors",
+        "strength": 0.8
+      },
+      "lora_3": {
+        "on": false,
+        "lora": "Anima\\人物\\anima_moria_luluka_v1.1.safetensors",
+        "strength": 0.8
+      },
+      "➕ Add Lora": "",
+      "model": [
+        "1071:1076",
+        0
+      ],
+      "clip": [
+        "1071:1073",
+        0
+      ]
+    },
+    "class_type": "Power Lora Loader (rgthree)",
+    "_meta": {
+      "title": "lora 1 人物"
+    }
+  },
+  "1382": {
+    "inputs": {
+      "PowerLoraLoaderHeaderWidget": {
+        "type": "PowerLoraLoaderHeaderWidget"
+      },
+      "lora_1": {
+        "on": false,
+        "lora": "Anima\\画风\\gpt-image-2_anima-base1_v1.safetensors",
+        "strength": 0.25
+      },
+      "lora_2": {
+        "on": false,
+        "lora": "Anima\\画风\\chen-bin_v4.0.safetensors",
+        "strength": 0.3
+      },
+      "lora_3": {
+        "on": false,
+        "lora": "Anima\\画风\\firedotinc_old-dataset_anima-p3_v5.5.safetensors",
+        "strength": 0.6
+      },
+      "lora_4": {
+        "on": false,
+        "lora": "Anima\\画风\\futaba_v1_step1800.safetensors",
+        "strength": 0.5999999999999998
+      },
+      "lora_5": {
+        "on": false,
+        "lora": "Anima\\画风\\shiratama_2a_anima_lokr-000019.safetensors",
+        "strength": 0.75
+      },
+      "lora_6": {
+        "on": false,
+        "lora": "Anima\\画风\\yzs_anima_v0.3.safetensors",
+        "strength": 1
+      },
+      "lora_7": {
+        "on": false,
+        "lora": "Anima\\画风\\nyalia2_anima3.safetensors",
+        "strength": 1
+      },
+      "➕ Add Lora": "",
+      "model": [
+        "1384",
+        0
+      ],
+      "clip": [
+        "1384",
+        1
+      ]
+    },
+    "class_type": "Power Lora Loader (rgthree)",
+    "_meta": {
+      "title": "lora 2-2 动漫系画风"
+    }
+  },
+  "1383": {
+    "inputs": {
+      "PowerLoraLoaderHeaderWidget": {
+        "type": "PowerLoraLoaderHeaderWidget"
+      },
+      "lora_1": {
+        "on": true,
+        "lora": "Anima\\画风\\Scenery_enchancer-Anima-P3.safetensors",
+        "strength": 0.4999999999999997
+      },
+      "lora_2": {
+        "on": false,
+        "lora": "Anima\\画风\\anima-base-1-photo-background-v4.safetensors",
+        "strength": 0.4999999999999996
+      },
+      "lora_3": {
+        "on": true,
+        "lora": "画风\\bakaE79AAEE882A4.Md2S.safetensors",
+        "strength": 0.4499999999999996
+      },
+      "lora_4": {
+        "on": false,
+        "lora": "画风\\bakav3-000012.safetensors",
+        "strength": 0.6999999999999997
+      },
+      "lora_5": {
+        "on": true,
+        "lora": "Anima-半写实动漫.safetensors",
+        "strength": 1
+      },
+      "➕ Add Lora": "",
+      "model": [
+        "1382",
+        0
+      ],
+      "clip": [
+        "1382",
+        1
+      ]
+    },
+    "class_type": "Power Lora Loader (rgthree)",
+    "_meta": {
+      "title": "lora 2-3 真实系画风"
+    }
+  },
+  "1384": {
+    "inputs": {
+      "PowerLoraLoaderHeaderWidget": {
+        "type": "PowerLoraLoaderHeaderWidget"
+      },
+      "lora_1": {
+        "on": true,
+        "lora": "Anima\\anima_context_detailer_base10.safetensors",
+        "strength": 0.5
+      },
+      "lora_2": {
+        "on": true,
+        "lora": "画风\\anima-highres-aesthetic-boost.safetensors",
+        "strength": 0.5
+      },
+      "lora_3": {
+        "on": true,
+        "lora": "画风\\Anima_colorfix_v1_by_Volnovik.safetensors",
+        "strength": 0.29999999999999993
+      },
+      "➕ Add Lora": "",
+      "model": [
+        "1381",
+        0
+      ],
+      "clip": [
+        "1381",
+        1
+      ]
+    },
+    "class_type": "Power Lora Loader (rgthree)",
+    "_meta": {
+      "title": "lora 2-1 画风质量"
+    }
+  },
+  "1607": {
+    "inputs": {
+      "image": "agent_ref_1790255938.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "CN image"
+    },
+    "is_changed": [
+      "fe76bf8f84ce6e2280b2df24566113cf062342f29a0ba63d45e0ec68bf864d81"
+    ]
+  },
+  "1608": {
+    "inputs": {
+      "image": "input.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "图生图图像"
+    },
+    "is_changed": [
+      "18f8475f692308a87a5ad9521915a2f03caea7c52ea6c21f83b2369e3b5037d5"
+    ]
+  },
+  "1609": {
+    "inputs": {
+      "rgthree_comparer": {
+        "images": [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_icioe_00009_.png&type=temp&subfolder=&rand=0.181442966436262"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_icioe_00010_.png&type=temp&subfolder=&rand=0.9775548948825562"
+          }
+        ]
+      },
+      "image_a": [
+        "1607",
+        0
+      ],
+      "image_b": [
+        "1608",
+        0
+      ]
+    },
+    "class_type": "Image Comparer (rgthree)",
+    "_meta": {
+      "title": "Image Comparer (rgthree)"
+    }
+  },
+  "1610": {
+    "inputs": {
+      "value": "masterpiece, best quality, absurdres, 1girl, solo, anime aesthetic"
+    },
+    "class_type": "String",
+    "_meta": {
+      "title": "POS Prompt"
+    }
+  },
+  "1611": {
+    "inputs": {
+      "value": "worst quality, low quality, bad anatomy, bad hands, missing fingers, extra limbs"
+    },
+    "class_type": "String",
+    "_meta": {
+      "title": "NEG Prompt"
+    }
+  },
+  "1649": {
+    "inputs": {
+      "filename_prefix": "test_style_d55",
+      "images": [
+        "119",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "生图保存结果"
+    }
+  },
+  "1650": {
+    "inputs": {
+      "rgthree_comparer": {
+        "images": [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_ihazp_00005_.png&type=temp&subfolder=&rand=0.7612306775638845"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_ihazp_00006_.png&type=temp&subfolder=&rand=0.09048697957088558"
+          }
+        ]
+      },
+      "image_a": [
+        "1608",
+        0
+      ],
+      "image_b": [
+        "119",
+        0
+      ]
+    },
+    "class_type": "Image Comparer (rgthree)",
+    "_meta": {
+      "title": "Image Comparer (rgthree)"
+    }
+  },
+  "1668": {
+    "inputs": {
+      "rgthree_comparer": {
+        "images": []
+      }
+    },
+    "class_type": "Image Comparer (rgthree)",
+    "_meta": {
+      "title": "Image Comparer (rgthree)"
+    }
+  },
+  "1673": {
+    "inputs": {
+      "value": "1girl, skirt, breasts, looking at viewer, white shirt, smile, long hair, solo, shirt, ponytail, purple eyes, indoors, black hair, red skirt, large breasts, school uniform, ribbon, best quality, pointing, desk, school desk, classroom, white socks, socks, pleated skirt, black ribbon, bangs, bow, thigh strap, pointing at viewer, non-web source, chalkboard, collared shirt, bowtie, standing, miniskirt, necktie, neck ribbon, closed mouth, hair ribbon, hair between eyes, general, sunlight, diagonal-striped clothes, black bow, red sailor collar, sensitive, very long hair, window, black bowtie, goddess of victory: nikke, foreshortening, school chair, blush, thighhighs, high ponytail, shirt tucked in, striped bowtie, long sleeves, from above, sidelocks, self-upload, striped bow, white thighhighs"
+    },
+    "class_type": "String",
+    "_meta": {
+      "title": "词条临时工作区"
+    }
+  },
+  "1687": {
+    "inputs": {
+      "sage_attention": "auto",
+      "allow_compile": false,
+      "model": [
+        "1632:1635",
+        1
+      ]
+    },
+    "class_type": "PathchSageAttentionKJ",
+    "_meta": {
+      "title": "Patch Sage Attention KJ"
+    }
+  },
+  "1692": {
+    "inputs": {
+      "value": ""
+    },
+    "class_type": "String",
+    "_meta": {
+      "title": "画师串"
+    }
+  },
+  "1696": {
+    "inputs": {
+      "lora_str": "",
+      "temp_lora_str": "",
+      "打开Lora堆": "",
+      "clip": [
+        "1697",
+        1
+      ],
+      "model": [
+        "1697",
+        0
+      ]
+    },
+    "class_type": "WeiLinPromptUIOnlyLoraStack",
+    "_meta": {
+      "title": "WeiLin Lora Stack"
+    }
+  },
+  "1697": {
+    "inputs": {
+      "PowerLoraLoaderHeaderWidget": {
+        "type": "PowerLoraLoaderHeaderWidget"
+      },
+      "➕ Add Lora": "",
+      "model": [
+        "1383",
+        0
+      ],
+      "clip": [
+        "1383",
+        1
+      ]
+    },
+    "class_type": "Power Lora Loader (rgthree)",
+    "_meta": {
+      "title": "lora 3 杂项"
+    }
+  },
+  "513:504": {
+    "inputs": {
+      "base_ctx": [
+        "513:519",
+        0
+      ],
+      "model": [
+        "513:591",
+        0
+      ]
+    },
+    "class_type": "Context (rgthree)",
+    "_meta": {
+      "title": "Context (rgthree)"
+    }
+  },
+  "513:519": {
+    "inputs": {
+      "base_ctx": [
+        "1632:1637",
+        0
+      ]
+    },
+    "class_type": "Context Big (rgthree)",
+    "_meta": {
+      "title": "Context Big (rgthree)"
+    }
+  },
+  "513:590": {
+    "inputs": {
+      "boolean": false,
+      "on_true": [
+        "513:1038",
+        0
+      ],
+      "on_false": [
+        "513:519",
+        1
+      ]
+    },
+    "class_type": "Switch any [Crystools]",
+    "_meta": {
+      "title": "🪛 Switch any"
+    }
+  },
+  "513:1038": {
+    "inputs": {
+      "lllite_name": "Anima\\anima-lllite-any-test-like-v2.safetensors",
+      "strength": -1.1000000000000003,
+      "start_percent": 0.0,
+      "end_percent": 1.0,
+      "preserve_wrapper": false,
+      "model": [
+        "513:519",
+        1
+      ],
+      "image": [
+        "1641:1685",
+        7
+      ]
+    },
+    "class_type": "AnimaLLLiteApply_sdscripts",
+    "_meta": {
+      "title": "Apply Anima ControlNet-LLLite (sd-scripts)"
+    }
+  },
+  "513:591": {
+    "inputs": {
+      "boolean": false,
+      "on_true": [
+        "513:1039",
+        0
+      ],
+      "on_false": [
+        "513:590",
+        0
+      ]
+    },
+    "class_type": "Switch any [Crystools]",
+    "_meta": {
+      "title": "🪛 Switch any"
+    }
+  },
+  "513:1039": {
+    "inputs": {
+      "lllite_name": "Anima\\anima-lllite-inpainting-v1.safetensors",
+      "strength": 1.0,
+      "start_percent": 0.0,
+      "end_percent": 1.0,
+      "preserve_wrapper": true,
+      "model": [
+        "513:590",
+        0
+      ],
+      "image": [
+        "513:519",
+        7
+      ],
+      "mask": [
+        "513:519",
+        21
+      ]
+    },
+    "class_type": "AnimaLLLiteApply_sdscripts",
+    "_meta": {
+      "title": "Apply Anima ControlNet-LLLite (sd-scripts)"
+    }
+  },
+  "1071:1072": {
+    "inputs": {
+      "threshold": 0.15,
+      "teacache_version": "v2 (Standard Precise)",
+      "adaptive_mode": true,
+      "early_steps_factor": 0.4,
+      "late_steps_factor": 1.8,
+      "start_percent": 0.3,
+      "end_percent": 1,
+      "cache_device": "cuda",
+      "model": [
+        "1071:1077",
+        0
+      ]
+    },
+    "class_type": "AnimaTeaCache",
+    "_meta": {
+      "title": "Anima TeaCache (BSS)"
+    }
+  },
+  "1071:1077": {
+    "inputs": {
+      "model_name": "Anima\\miaomiaoHarem_animaBase.safetensors",
+      "sage_attention": "disabled",
+      "torch_compile": false
+    },
+    "class_type": "AnimaBoosterLoader",
+    "_meta": {
+      "title": "Anima Booster Loader (BSS)"
+    }
+  },
+  "1071:1076": {
+    "inputs": {
+      "threshold": 0.15,
+      "teacache_version": "v2 (Standard Precise)",
+      "adaptive_mode": true,
+      "early_steps_factor": 0.4,
+      "late_steps_factor": 1.8,
+      "start_percent": 0.0,
+      "end_percent": 1.0,
+      "cache_device": "cuda",
+      "model": [
+        "1071:1077",
+        0
+      ]
+    },
+    "class_type": "AnimaTeaCache",
+    "_meta": {
+      "title": "Anima TeaCache (BSS)"
+    }
+  },
+  "1071:1074": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "1071:1073": {
+    "inputs": {
+      "clip_name": "qwen_3_06b_base.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "1071:1616": {
+    "inputs": {
+      "model": [
+        "1696",
+        1
+      ],
+      "clip": [
+        "1696",
+        0
+      ],
+      "vae": [
+        "1071:1074",
+        0
+      ]
+    },
+    "class_type": "Context (rgthree)",
+    "_meta": {
+      "title": "Context (rgthree)"
+    }
+  },
+  "1603:1425": {
+    "inputs": {
+      "aspect_ratio": "21:9 (Ultrawide)",
+      "megapixels": 1,
+      "multiple": 8
+    },
+    "class_type": "ResolutionSelector",
+    "_meta": {
+      "title": "Resolution Selector"
+    }
+  },
+  "1603:1525": {
+    "inputs": {
+      "boolean": true
+    },
+    "class_type": "BooleanBasic",
+    "_meta": {
+      "title": "2"
+    }
+  },
+  "1603:1527": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "BooleanBasic",
+    "_meta": {
+      "title": "3"
+    }
+  },
+  "1603:1528": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "BooleanBasic",
+    "_meta": {
+      "title": "4"
+    }
+  },
+  "1603:1517": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "BooleanBasic",
+    "_meta": {
+      "title": "1"
+    }
+  },
+  "1603:1423": {
+    "inputs": {
+      "base_ctx": [
+        "1641:1626",
+        0
+      ]
+    },
+    "class_type": "Context Big (rgthree)",
+    "_meta": {
+      "title": "Context Big (rgthree)"
+    }
+  },
+  "1603:1640": {
+    "inputs": {
+      "base_ctx": [
+        "1603:1423",
+        0
+      ],
+      "latent": [
+        "1603:1675",
+        0
+      ]
+    },
+    "class_type": "Context Big (rgthree)",
+    "_meta": {
+      "title": "Context Big (rgthree)"
+    }
+  },
+  "1603:1424": {
+    "inputs": {
+      "grow_mask_by": 22,
+      "pixels": [
+        "1603:1423",
+        7
+      ],
+      "vae": [
+        "1603:1423",
+        3
+      ],
+      "mask": [
+        "1603:1423",
+        21
+      ]
+    },
+    "class_type": "VAEEncodeForInpaint",
+    "_meta": {
+      "title": "①VAE编码（局部重绘）"
+    }
+  },
+  "1603:1426": {
+    "inputs": {
+      "pixels": [
+        "1603:1423",
+        7
+      ],
+      "vae": [
+        "1603:1423",
+        3
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "②VAE编码（图生图）"
+    }
+  },
+  "1603:1428": {
+    "inputs": {
+      "width": [
+        "1603:1425",
+        0
+      ],
+      "height": [
+        "1603:1425",
+        1
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "③空Latent图像"
+    }
+  },
+  "1603:1427": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "④空Latent图像"
+    }
+  },
+  "1603:1675": {
+    "inputs": {
+      "select": [
+        "1603:1538:1529",
+        0
+      ],
+      "sel_mode": false,
+      "input1": [
+        "1603:1424",
+        0
+      ],
+      "input2": [
+        "1603:1426",
+        0
+      ],
+      "input3": [
+        "1603:1428",
+        0
+      ],
+      "input4": [
+        "1603:1427",
+        0
+      ]
+    },
+    "class_type": "ImpactSwitch",
+    "_meta": {
+      "title": "Switch (Any)"
+    }
+  },
+  "1603:1538:1533": {
+    "inputs": {
+      "boolean": [
+        "1603:1517",
+        0
+      ],
+      "on_true": [
+        "1603:1538:1531",
+        0
+      ],
+      "on_false": [
+        "1603:1538:1532",
+        0
+      ]
+    },
+    "class_type": "Switch any [Crystools]",
+    "_meta": {
+      "title": "🪛 Switch any"
+    }
+  },
+  "1603:1538:1531": {
+    "inputs": {
+      "value": 1
+    },
+    "class_type": "Int",
+    "_meta": {
+      "title": "1"
+    }
+  },
+  "1603:1538:1537": {
+    "inputs": {
+      "value": 4
+    },
+    "class_type": "Int",
+    "_meta": {
+      "title": "4"
+    }
+  },
+  "1603:1538:1535": {
+    "inputs": {
+      "boolean": [
+        "1603:1525",
+        0
+      ],
+      "on_true": [
+        "1603:1538:1534",
+        0
+      ],
+      "on_false": [
+        "1603:1538:1533",
+        0
+      ]
+    },
+    "class_type": "Switch any [Crystools]",
+    "_meta": {
+      "title": "🪛 Switch any"
+    }
+  },
+  "1603:1538:1534": {
+    "inputs": {
+      "value": 2
+    },
+    "class_type": "Int",
+    "_meta": {
+      "title": "2"
+    }
+  },
+  "1603:1538:1521": {
+    "inputs": {
+      "value": 3
+    },
+    "class_type": "Int",
+    "_meta": {
+      "title": "3"
+    }
+  },
+  "1603:1538:1536": {
+    "inputs": {
+      "boolean": [
+        "1603:1527",
+        0
+      ],
+      "on_true": [
+        "1603:1538:1521",
+        0
+      ],
+      "on_false": [
+        "1603:1538:1535",
+        0
+      ]
+    },
+    "class_type": "Switch any [Crystools]",
+    "_meta": {
+      "title": "🪛 Switch any"
+    }
+  },
+  "1603:1538:1529": {
+    "inputs": {
+      "boolean": [
+        "1603:1528",
+        0
+      ],
+      "on_true": [
+        "1603:1538:1537",
+        0
+      ],
+      "on_false": [
+        "1603:1538:1536",
+        0
+      ]
+    },
+    "class_type": "Switch any [Crystools]",
+    "_meta": {
+      "title": "🪛 Switch any"
+    }
+  },
+  "1603:1538:1532": {
+    "inputs": {
+      "value": 99
+    },
+    "class_type": "Int",
+    "_meta": {
+      "title": "Null"
+    }
+  },
+  "1632:1637": {
+    "inputs": {
+      "base_ctx": [
+        "1632:1635",
+        0
+      ],
+      "model": [
+        "1632:1691",
+        0
+      ],
+      "positive": [
+        "1632:1691",
+        1
+      ],
+      "negative": [
+        "1632:1636",
+        0
+      ]
+    },
+    "class_type": "Context (rgthree)",
+    "_meta": {
+      "title": "非edit context"
+    }
+  },
+  "1632:1689": {
+    "inputs": {
+      "start_block": 0,
+      "end_block": -1,
+      "start_percent": 0.0,
+      "end_percent": 1.0,
+      "normalize_weights": true,
+      "artist_ema_alpha": 0.0,
+      "lowrank_k": 1,
+      "artist_static_capture": false,
+      "static_capture_k": 6,
+      "artist_anchor_q": false,
+      "anchor_seed_list": "",
+      "anchor_seeds_count": 1,
+      "anchor_user_blend": 0.0,
+      "anchor_deep_layer_threshold": -1,
+      "stabilizer_end_percent": 1.0,
+      "anchor_refresh_mode": "once",
+      "anchor_cache_points": 8,
+      "layer_filter": "",
+      "anchor_keyframe_mode": "uniform_sigma"
+    },
+    "class_type": "AnimaArtistOptions",
+    "_meta": {
+      "title": "Anima Artist Options (Advanced)"
+    },
+    "is_changed": [
+      "|once|8|uniform_sigma|False"
+    ]
+  },
+  "1632:1691": {
+    "inputs": {
+      "strength": 1.0,
+      "normalize_weights": true,
+      "alignment_mode": "base_anchored",
+      "enabled": true,
+      "apply_to_uncond": false,
+      "uncond_strength": 0.0,
+      "model": [
+        "1687",
+        0
+      ],
+      "artist_pack": [
+        "1632:1690",
+        0
+      ],
+      "advanced_options": [
+        "1632:1689",
+        0
+      ]
+    },
+    "class_type": "AnimaArtistAdapterMixer",
+    "_meta": {
+      "title": "Anima Artist Adapter Mixer (Experimental)"
+    }
+  },
+  "1632:1636": {
+    "inputs": {
+      "text": [
+        "1632:1635",
+        19
+      ],
+      "clip": [
+        "1632:1635",
+        2
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "1632:1690": {
+    "inputs": {
+      "artist_chain": [
+        "1632:1635",
+        18
+      ],
+      "base_prompt": [
+        "1632:1635",
+        17
+      ],
+      "clip": [
+        "1632:1635",
+        2
+      ]
+    },
+    "class_type": "AnimaArtistPack",
+    "_meta": {
+      "title": "Anima Artist Pack (Split + Encode)"
+    }
+  },
+  "1632:1635": {
+    "inputs": {
+      "base_ctx": [
+        "1603:1640",
+        0
+      ]
+    },
+    "class_type": "Context Big (rgthree)",
+    "_meta": {
+      "title": "Context Big (rgthree)"
+    }
+  },
+  "1641:1685": {
+    "inputs": {
+      "images": [
+        "1607",
+        0
+      ]
+    },
+    "class_type": "Context Big (rgthree)",
+    "_meta": {
+      "title": "CNContext"
+    }
+  },
+  "1641:1626": {
+    "inputs": {
+      "base_ctx": [
+        "1071:1616",
+        0
+      ],
+      "images": [
+        "1608",
+        0
+      ],
+      "text_pos_g": [
+        "1610",
+        0
+      ],
+      "text_pos_l": [
+        "1692",
+        0
+      ],
+      "text_neg_g": [
+        "1611",
+        0
+      ],
+      "mask": [
+        "1608",
+        1
+      ]
+    },
+    "class_type": "Context Big (rgthree)",
+    "_meta": {
+      "title": "Context Big (rgthree)"
+    }
+  }
+}

@@ -1,0 +1,719 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Anima Agent Studio: Dual-Workflow Web GUI
+Supports:
+  1. Qwen-Image 2.1 Advanced (Text-to-Image / Image-to-Image / Local Editing)
+  2. Anima AIO Yuri (SDXL Anime Specialization + LoRA Stacking)
+"""
+
+import os
+import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
+import json
+import time
+import base64
+import random
+import urllib.request
+import urllib.error
+import urllib.parse
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+import anima_agent_bridge
+
+CONFIG = anima_agent_bridge.get_config()
+
+HTML_CONTENT = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Anima Agent Studio - 双工作流智能控制台</title>
+  <style>
+    :root {
+      --bg: #0b0d13;
+      --card: #151822;
+      --border: #232838;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent: #ec4899;
+      --accent-hover: #db2777;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background-color: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; padding: 20px; }
+    .container { max-width: 1440px; margin: 0 auto; display: grid; grid-template-columns: 520px 1fr; gap: 20px; }
+    header { grid-column: 1 / -1; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    h1 { font-size: 22px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; }
+    .badges { display: flex; gap: 8px; }
+    .badge { font-size: 12px; background: #6366f122; color: #a5b4fc; border: 1px solid #6366f144; padding: 3px 10px; border-radius: 999px; }
+    .badge-vram { background: #10b98122; color: #34d399; border-color: #10b98144; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+    .card-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #f8fafc; display: flex; justify-content: space-between; align-items: center; }
+    textarea, input, select { width: 100%; background: #0b0d13; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 10px; font-size: 13px; margin-bottom: 10px; font-family: inherit; }
+    textarea:focus, input:focus, select:focus { outline: none; border-color: var(--primary); }
+    button { width: 100%; background: var(--primary); color: #fff; border: none; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    button:hover { background: var(--primary-hover); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-generate { background: var(--accent); margin-top: 10px; font-size: 15px; }
+    .btn-generate:hover { background: var(--accent-hover); }
+    .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .param-item label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
+    .param-item input, .param-item select { margin-bottom: 0; }
+    .status-box { background: #0b0d13; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; max-height: 220px; overflow-y: auto; color: #cbd5e1; }
+    .preview-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 620px; background: #0b0d13; border: 2px dashed var(--border); border-radius: 12px; overflow: hidden; position: relative; padding: 12px; }
+    .preview-img { max-width: 100%; max-height: 780px; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); cursor: pointer; }
+    .placeholder { color: var(--muted); text-align: center; }
+    .spinner { border: 4px solid #232838; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .thumb-preview { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); margin-right: 10px; }
+    .workflow-pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 6px; }
+    .pill-qwen { background: #0284c722; color: #38bdf8; border: 1px solid #0284c744; }
+    .pill-anima { background: #ec489922; color: #f472b6; border: 1px solid #ec489944; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🌸 Anima Agent Studio <span id="curEnginePill" class="workflow-pill pill-qwen">Qwen-Image 2.1</span></h1>
+      <div class="badges">
+        <span class="badge">🧠 本地 LLM (极速推理与提示词规划)</span>
+        <span class="badge badge-vram">⚡ ComfyUI (100% 独立显存生图)</span>
+      </div>
+    </header>
+
+    <div class="sidebar">
+      <div class="card">
+        <div class="card-title">🎯 目标工作流引擎</div>
+        <select id="wfSelect" onchange="onWorkflowChange()" style="font-weight: 600; font-size: 13px; color: #38bdf8;">
+          <option value="qwen" selected>✨ Qwen-Image 2.1 进阶 (文生图 / 图生图 / 图像编辑)</option>
+          <option value="anima">🌸 Anima AIO Yuri (SDXL 动漫专精 + LoRA 堆叠)</option>
+        </select>
+
+        <div class="card-title" style="margin-top: 14px;">🤖 自然语言指令 / 多模态看图改图</div>
+        <textarea id="instruction" rows="3" placeholder="例如：赛博朋克霓虹街道上撑着雨伞的银发猫耳少女，超高清细节，电影级光影"></textarea>
+        
+        <div style="margin-bottom: 10px;">
+          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">参考底图（上传则自动进入【图生图/图像编辑】模式，不传为【文生图】）：</label>
+          <div style="display: flex; align-items: center;">
+            <img id="refThumb" class="thumb-preview" style="display: none;">
+            <input type="file" id="refImage" accept="image/*" style="font-size: 12px; padding: 6px; margin-bottom: 0;">
+            <button id="btnClearImg" onclick="clearImage()" style="width: auto; padding: 6px 10px; margin-left: 6px; font-size: 11px; background: #334155; display: none;">清除</button>
+          </div>
+        </div>
+
+        <button id="btnPlan" onclick="sendToAgent()">✨ Agent 规划并写入工作流</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>⚙️ 当前工作流参数控制板</span>
+          <button style="width: auto; padding: 2px 8px; font-size: 11px; background: transparent; border: 1px solid var(--border);" onclick="fetchStatus()">刷新读取</button>
+        </div>
+        <div class="param-grid">
+          <div class="param-item">
+            <label>采样步数 (Steps)</label>
+            <input type="number" id="pSteps">
+          </div>
+          <div class="param-item">
+            <label>CFG Scale</label>
+            <input type="number" id="pCFG" step="0.1">
+          </div>
+          <div class="param-item">
+            <label id="lblRatioOrDenoise">画幅比例 (Ratio) / 去噪 (Denoise)</label>
+            <input type="text" id="pRatioOrDenoise">
+          </div>
+          <div class="param-item">
+            <label>随机种子 (Seed, -1 为随机)</label>
+            <input type="text" id="pSeed">
+          </div>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">正向提示词 (Prompt)</label>
+          <textarea id="pPrompt" rows="4"></textarea>
+        </div>
+
+        <div id="negPromptSection" style="margin-top: 5px; display: none;">
+          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">负向提示词 (Negative Prompt)</label>
+          <textarea id="pNegPrompt" rows="3"></textarea>
+        </div>
+
+        <div id="loraSection" style="margin-top: 5px; font-size: 12px; color: #a5b4fc; display: none;">
+          <span style="color: var(--muted); font-size: 11px; display: block; margin-bottom: 4px;">当前挂载的 LoRA 列表:</span>
+          <div id="pLoras" style="background: #0b0d13; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-family: monospace;">无</div>
+        </div>
+
+        <button id="btnGen" class="btn-generate" onclick="triggerGenerate()">🚀 一键调用 ComfyUI 渲染生成</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📜 实时通信与调度日志</div>
+        <div class="status-box" id="logBox">[System] Anima Agent Studio 已启动就绪。</div>
+      </div>
+    </div>
+
+    <div class="preview-area">
+      <div class="card" style="height: 100%; display: flex; flex-direction: column;">
+        <div class="card-title">
+          <span>🖼️ 高清成图实时预览</span>
+          <span id="genInfo" style="font-size: 12px; color: var(--muted);">等待渲染</span>
+        </div>
+        <div class="preview-container">
+          <div id="placeholderText" class="placeholder">
+            <svg style="width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            <p>输入自然语言指令或上传参考图</p>
+            <p style="font-size: 11px; margin-top: 4px; color: #64748b;">点击生成后，GPU 将全力独占显存渲染</p>
+          </div>
+          <img id="resultImage" class="preview-img" style="display: none;" onclick="window.open(this.src)">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentImageBase64 = null;
+    let initialImageLoaded = false;
+
+    document.getElementById('refImage').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        currentImageBase64 = evt.target.result;
+        const thumb = document.getElementById('refThumb');
+        thumb.src = currentImageBase64;
+        thumb.style.display = 'block';
+        document.getElementById('btnClearImg').style.display = 'inline-block';
+        appendLog('已加载参考底图：' + file.name + '，自动进入【图生图/图像编辑】模式');
+        fetchStatus();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function clearImage() {
+      currentImageBase64 = null;
+      document.getElementById('refImage').value = '';
+      document.getElementById('refThumb').style.display = 'none';
+      document.getElementById('btnClearImg').style.display = 'none';
+      appendLog('已移除参考底图，将执行【文生图】');
+      fetchStatus();
+    }
+
+    function appendLog(msg) {
+      const b = document.getElementById('logBox');
+      const time = new Date().toLocaleTimeString();
+      b.innerText += `[${time}] ${msg}\n`;
+      b.scrollTop = b.scrollHeight;
+    }
+
+    function onWorkflowChange() {
+      const wf = document.getElementById('wfSelect').value;
+      const pill = document.getElementById('curEnginePill');
+      const loraSec = document.getElementById('loraSection');
+      const negSec = document.getElementById('negPromptSection');
+      const lbl = document.getElementById('lblRatioOrDenoise');
+
+      if (wf === 'qwen') {
+        pill.innerText = 'Qwen-Image 2.1 (进阶)';
+        pill.className = 'workflow-pill pill-qwen';
+        loraSec.style.display = 'none';
+        negSec.style.display = 'none';
+        lbl.innerText = '画幅比例 (Ratio: 16:9, 2:3, 1:1)';
+      } else {
+        pill.innerText = 'Anima AIO Yuri (SDXL)';
+        pill.className = 'workflow-pill pill-anima';
+        loraSec.style.display = 'block';
+        negSec.style.display = 'block';
+        lbl.innerText = '去噪强度 (Denoise)';
+      }
+      fetchStatus();
+    }
+
+    async function fetchStatus() {
+      const wf = document.getElementById('wfSelect').value;
+      const hasImg = !!currentImageBase64;
+      try {
+        const res = await fetch('/api/status?workflow=' + wf + '&has_image=' + (hasImg ? '1' : '0'));
+        const data = await res.json();
+        document.getElementById('pSteps').value = data.steps || (wf === 'qwen' ? 40 : 28);
+        document.getElementById('pCFG').value = data.cfg !== undefined ? data.cfg : (wf === 'qwen' ? 1.0 : 4.0);
+        document.getElementById('pRatioOrDenoise').value = data.wh_ratio || data.denoise || (wf === 'qwen' ? '2:3' : 0.55);
+        document.getElementById('pSeed').value = data.seed !== undefined ? data.seed : -1;
+        document.getElementById('pPrompt').value = data.prompt || '';
+        document.getElementById('pNegPrompt').value = data.negative_prompt || '';
+        const lorasElem = document.getElementById('pLoras');
+        if (lorasElem) {
+          lorasElem.innerText = (data.active_loras && data.active_loras.length) ? data.active_loras.join(' | ') : '无';
+        }
+        
+        if (data.latest_image && !initialImageLoaded) {
+          initialImageLoaded = true;
+          const img = document.getElementById('resultImage');
+          const placeholder = document.getElementById('placeholderText');
+          img.src = data.latest_image + '?t=' + Date.now();
+          img.style.display = 'block';
+          placeholder.style.display = 'none';
+          appendLog('已加载最近生成的渲染图片。');
+        }
+        appendLog('已同步读取 [' + (wf === 'qwen' ? 'Qwen-Image 2.1' : 'Anima Yuri') + '] 当前工作流配置。');
+      } catch (e) {
+        appendLog('读取工作流失败: ' + e);
+      }
+    }
+
+    async function sendToAgent() {
+      const instruction = document.getElementById('instruction').value.trim();
+      if (!instruction) {
+        alert('请输入指令！');
+        return;
+      }
+      const wf = document.getElementById('wfSelect').value;
+      const btn = document.getElementById('btnPlan');
+      btn.disabled = true;
+      btn.innerText = '⏳ 正在调入 Agent 视觉模型规划中...';
+      appendLog('正在释放显存，按需调入本地 LLM 大模型 (目标: ' + wf.toUpperCase() + ')...');
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            workflow: wf,
+            instruction: instruction,
+            image: currentImageBase64
+          })
+        });
+        const ret = await res.json();
+        if (ret.status === 'success') {
+          appendLog('✅ Agent 规划完成，已即刻卸载释放显存！');
+          appendLog('已成功应用新提示词与参数！');
+          await fetchStatus();
+        } else {
+          appendLog('❌ Agent 规划错误: ' + (ret.error || '未知错误'));
+        }
+      } catch (err) {
+        appendLog('❌ 请求异常: ' + err);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '✨ Agent 规划并写入工作流';
+      }
+    }
+
+    async function triggerGenerate() {
+      const wf = document.getElementById('wfSelect').value;
+      const btn = document.getElementById('btnGen');
+      btn.disabled = true;
+      btn.innerText = '⏳ 显卡全力渲染采样中...';
+      
+      const placeholder = document.getElementById('placeholderText');
+      const img = document.getElementById('resultImage');
+      const genInfo = document.getElementById('genInfo');
+      placeholder.innerHTML = '<div class="spinner"></div><p>ComfyUI 正在推理采样，显卡 100% 显存全力渲染中...</p>';
+      img.style.display = 'none';
+      appendLog('向 ComfyUI 提交 [' + wf.toUpperCase() + '] API 渲染队列，显存专供出图...');
+
+      const payload = {
+        workflow: wf,
+        has_image: !!currentImageBase64,
+        image: currentImageBase64,
+        prompt: document.getElementById('pPrompt').value,
+        negative_prompt: document.getElementById('pNegPrompt').value,
+        steps: parseInt(document.getElementById('pSteps').value || (wf === 'qwen' ? 40 : 28)),
+        cfg: parseFloat(document.getElementById('pCFG').value || (wf === 'qwen' ? 1.0 : 4.0)),
+        ratio_or_denoise: document.getElementById('pRatioOrDenoise').value,
+        seed: document.getElementById('pSeed').value
+      };
+
+      const startTime = Date.now();
+      try {
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+        if (data.status === 'success' && data.image_url) {
+          img.src = data.image_url + '?t=' + Date.now();
+          img.style.display = 'block';
+          placeholder.style.display = 'none';
+          genInfo.innerText = `引擎: ${wf.toUpperCase()} | 耗时: ${duration}s | 种子: ${data.seed || '随机'}`;
+          appendLog(`🎉 图像生成成功！渲染耗时: ${duration}秒`);
+        } else {
+          placeholder.innerHTML = '<p style="color: #ef4444;">❌ 生成失败</p><p style="font-size: 12px; margin-top: 4px;">' + (data.error || '未知错误') + '</p>';
+          appendLog('❌ 生成失败: ' + (data.error || '未知错误'));
+        }
+      } catch (err) {
+        placeholder.innerHTML = '<p style="color: #ef4444;">❌ 请求异常</p>';
+        appendLog('❌ 请求异常: ' + err);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '🚀 一键调用 ComfyUI 渲染生成';
+      }
+    }
+
+    window.onload = function() {
+      onWorkflowChange();
+    };
+  </script>
+</body>
+</html>
+"""
+
+def get_status_for_workflow(wf="qwen", has_image=None):
+    cfg = anima_agent_bridge.get_config()
+    status = {"prompt": "", "negative_prompt": "", "steps": 40 if wf == "qwen" else 28, "cfg": 1.0 if wf == "qwen" else 4.0, "denoise": 0.55, "wh_ratio": "2:3", "seed": -1, "active_loras": [], "latest_image": None}
+    
+    if wf == "qwen":
+        t2i_path = cfg["qwen_t2i_workflow"]
+        i2i_path = cfg["qwen_i2i_workflow"]
+        if has_image is True:
+            target = i2i_path
+        elif has_image is False:
+            target = t2i_path
+        else:
+            t2i_mtime = os.path.getmtime(t2i_path) if os.path.exists(t2i_path) else 0
+            i2i_mtime = os.path.getmtime(i2i_path) if os.path.exists(i2i_path) else 0
+            target = i2i_path if i2i_mtime > t2i_mtime else t2i_path
+
+        if os.path.exists(target):
+            try:
+                with open(target, 'r', encoding='utf-8') as f:
+                    d = json.load(f)
+                if "4" in d:
+                    status["prompt"] = d["4"].get("inputs", {}).get("prompt", "")
+                if "6" in d:
+                    inp = d["6"].get("inputs", {})
+                    status["steps"] = inp.get("steps", 40)
+                    status["cfg"] = inp.get("cfg", 1.0)
+                    status["seed"] = inp.get("seed", -1)
+                if "5" in d:
+                    w = d["5"].get("inputs", {}).get("width", 832)
+                    h = d["5"].get("inputs", {}).get("height", 1216)
+                    for r, (rw, rh) in anima_agent_bridge.WH_RATIO_MAP.items():
+                        if rw == w and rh == h:
+                            status["wh_ratio"] = r
+                            break
+            except Exception as e:
+                print("[Qwen Status Error]:", e)
+    else:
+        target = cfg["anima_workflow"]
+        if os.path.exists(target):
+            try:
+                with open(target, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                if "1610" in data:
+                    status["prompt"] = data["1610"].get("inputs", {}).get("value", "")
+                if "1611" in data:
+                    status["negative_prompt"] = data["1611"].get("inputs", {}).get("value", "")
+                if "118" in data:
+                    inp = data["118"].get("inputs", {})
+                    status["steps"] = inp.get("steps", 28)
+                    status["cfg"] = inp.get("cfg", 4.0)
+                    status["denoise"] = inp.get("denoise", 0.55)
+                    status["seed"] = inp.get("seed", -1)
+                for nid in ["1381", "1382", "1383", "1384", "1697"]:
+                    if nid in data:
+                        for k, v in data[nid].get("inputs", {}).items():
+                            if isinstance(v, dict) and v.get("on") and "lora" in v:
+                                lora_name = os.path.basename(v["lora"])
+                                strength = round(v.get("strength", 1.0), 2)
+                                status["active_loras"].append(f"{lora_name} ({strength})")
+            except Exception as e:
+                print("[Anima Status Error]:", e)
+
+    out_dir = cfg["comfy_output_dir"]
+    if os.path.exists(out_dir):
+        imgs = [os.path.join(out_dir, f) for f in os.listdir(out_dir) if f.lower().endswith(('.png', '.jpg', '.webp'))]
+        if imgs:
+            newest = max(imgs, key=os.path.getmtime)
+            status["latest_image"] = f"/api/view_image/{os.path.basename(newest)}"
+            
+    return status
+
+class StudioHandler(BaseHTTPRequestHandler):
+    def log_message(self, format, *args):
+        return
+
+    def do_HEAD(self):
+        cfg = anima_agent_bridge.get_config()
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path.startswith('/api/view_image/'):
+            filename = os.path.basename(parsed.path)
+            filepath = os.path.join(cfg["comfy_output_dir"], filename)
+            if os.path.exists(filepath):
+                self.send_response(200)
+                ext = os.path.splitext(filename)[1].lower().replace('.', '')
+                self.send_header('Content-Type', f'image/{ext}')
+                self.send_header('Content-Length', str(os.path.getsize(filepath)))
+                self.end_headers()
+                return
+        self.send_response(200)
+        self.end_headers()
+
+    def do_GET(self):
+        cfg = anima_agent_bridge.get_config()
+        parsed = urllib.parse.urlparse(self.path)
+        qs = urllib.parse.parse_qs(parsed.query)
+        if parsed.path in ('/', '/index.html'):
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(HTML_CONTENT.encode('utf-8'))
+        elif parsed.path == '/api/status':
+            wf = qs.get("workflow", ["qwen"])[0]
+            has_image_param = qs.get("has_image", [None])[0]
+            has_image = None
+            if has_image_param == "1":
+                has_image = True
+            elif has_image_param == "0":
+                has_image = False
+            status = get_status_for_workflow(wf, has_image=has_image)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(status).encode('utf-8'))
+        elif parsed.path.startswith('/api/view_image/'):
+            filename = os.path.basename(parsed.path)
+            filepath = os.path.join(cfg["comfy_output_dir"], filename)
+            if os.path.exists(filepath):
+                self.send_response(200)
+                ext = os.path.splitext(filename)[1].lower().replace('.', '')
+                self.send_header('Content-Type', f'image/{ext}')
+                self.end_headers()
+                with open(filepath, 'rb') as f:
+                    self.wfile.write(f.read())
+            else:
+                self.send_response(404)
+                self.end_headers()
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def do_POST(self):
+        cfg = anima_agent_bridge.get_config()
+        comfy_api = cfg["comfy_api_url"]
+        input_dir = cfg["comfy_input_dir"]
+        output_dir = cfg["comfy_output_dir"]
+
+        parsed = urllib.parse.urlparse(self.path)
+        content_length = int(self.headers.get('Content-Length', 0))
+        post_body = self.rfile.read(content_length)
+
+        if parsed.path == '/api/chat':
+            try:
+                data = json.loads(post_body.decode('utf-8'))
+                wf = data.get('workflow', 'qwen')
+                instruction = data.get('instruction', '')
+                image_b64 = data.get('image')
+
+                temp_img_path = None
+                saved_filename = None
+                if image_b64 and ',' in image_b64:
+                    os.makedirs(input_dir, exist_ok=True)
+                    saved_filename = f"agent_ref_{int(time.time())}.jpg"
+                    temp_img_path = os.path.join(input_dir, saved_filename)
+                    b64_raw = image_b64.split(',', 1)[1]
+                    with open(temp_img_path, 'wb') as f:
+                        f.write(base64.b64decode(b64_raw))
+
+                print(f"[Studio] Calling LLM Agent for [{wf.upper()}] with instruction: {instruction}")
+                try:
+                    anima_agent_bridge.start_heretic()
+                    params = anima_agent_bridge.query_heretic(instruction, temp_img_path, workflow=wf)
+                    print(f"[Studio] LLM planned: {json.dumps(params, ensure_ascii=False)}")
+                    if wf == "qwen":
+                        anima_agent_bridge.apply_to_qwen_workflow(params, saved_filename)
+                    else:
+                        anima_agent_bridge.apply_to_anima_workflow(params, saved_filename)
+                finally:
+                    print("[Studio] Releasing LLM from VRAM handover...")
+                    anima_agent_bridge.kill_heretic()
+
+                status = get_status_for_workflow(wf, has_image=bool(saved_filename))
+                res_data = {"status": "success", "args": status}
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(res_data).encode('utf-8'))
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "error": str(e)}).encode('utf-8'))
+
+        elif parsed.path == '/api/generate':
+            try:
+                data = json.loads(post_body.decode('utf-8')) if post_body else {}
+                wf = data.get('workflow', 'qwen')
+                
+                output_node_id = "8"
+                cur_seed = random.randint(1, 10**15)
+                
+                if wf == "qwen":
+                    has_image = data.get("has_image", False)
+                    image_b64 = data.get("image")
+                    t2i_path = cfg["qwen_t2i_workflow"]
+                    i2i_path = cfg["qwen_i2i_workflow"]
+
+                    if has_image or (image_b64 and ',' in image_b64):
+                        target_workflow = i2i_path
+                    elif "has_image" in data and not has_image:
+                        target_workflow = t2i_path
+                    else:
+                        t2i_mtime = os.path.getmtime(t2i_path) if os.path.exists(t2i_path) else 0
+                        i2i_mtime = os.path.getmtime(i2i_path) if os.path.exists(i2i_path) else 0
+                        target_workflow = i2i_path if i2i_mtime > t2i_mtime else t2i_path
+
+                    with open(target_workflow, 'r', encoding='utf-8') as f:
+                        graph = json.load(f)
+                    
+                    if (has_image or image_b64) and image_b64 and ',' in image_b64:
+                        os.makedirs(input_dir, exist_ok=True)
+                        saved_filename = f"agent_ref_{int(time.time())}.jpg"
+                        temp_img_path = os.path.join(input_dir, saved_filename)
+                        b64_raw = image_b64.split(',', 1)[1]
+                        with open(temp_img_path, 'wb') as f:
+                            f.write(base64.b64decode(b64_raw))
+                        if "9" in graph:
+                            graph["9"]["inputs"]["image"] = saved_filename
+
+                    if data.get("prompt") and "4" in graph:
+                        graph["4"]["inputs"]["prompt"] = data["prompt"]
+                    if "6" in graph:
+                        ks = graph["6"]["inputs"]
+                        if data.get("steps"): ks["steps"] = int(data["steps"])
+                        if data.get("cfg"): ks["cfg"] = float(data["cfg"])
+                        if data.get("seed") and str(data["seed"]).strip() != "-1":
+                            try: cur_seed = int(data["seed"])
+                            except ValueError: pass
+                        ks["seed"] = cur_seed
+                        
+                    # Handle resolution from ratio
+                    ratio = data.get("ratio_or_denoise", "2:3")
+                    if ratio in anima_agent_bridge.WH_RATIO_MAP and "5" in graph:
+                        w, h = anima_agent_bridge.WH_RATIO_MAP[ratio]
+                        graph["5"]["inputs"]["width"] = w
+                        graph["5"]["inputs"]["height"] = h
+
+                    with open(target_workflow, 'w', encoding='utf-8') as f:
+                        json.dump(graph, f, ensure_ascii=False, indent=2)
+                    output_node_id = "8"
+                else:
+                    target_workflow = cfg["anima_workflow"]
+                    with open(target_workflow, 'r', encoding='utf-8') as f:
+                        graph = json.load(f)
+
+                    if data.get("prompt") and "1610" in graph:
+                        graph["1610"]["inputs"]["value"] = data["prompt"]
+                    if data.get("negative_prompt") and "1611" in graph:
+                        graph["1611"]["inputs"]["value"] = data["negative_prompt"]
+                    if "118" in graph:
+                        ks = graph["118"]["inputs"]
+                        if data.get("steps"): ks["steps"] = int(data["steps"])
+                        if data.get("cfg"): ks["cfg"] = float(data["cfg"])
+                        if data.get("ratio_or_denoise"):
+                            try: ks["denoise"] = float(data["ratio_or_denoise"])
+                            except ValueError: pass
+                        if data.get("seed") and str(data["seed"]).strip() != "-1":
+                            try: cur_seed = int(data["seed"])
+                            except ValueError: pass
+                        ks["seed"] = cur_seed
+
+                    with open(target_workflow, 'w', encoding='utf-8') as f:
+                        json.dump(graph, f, ensure_ascii=False, indent=2)
+                    output_node_id = "1649"
+
+                # Submit to ComfyUI API (/prompt)
+                req = urllib.request.Request(
+                    f"{comfy_api}/prompt",
+                    data=json.dumps({"prompt": graph}).encode('utf-8'),
+                    headers={'Content-Type': 'application/json'}
+                )
+                
+                res = urllib.request.urlopen(req, timeout=10)
+                resp = json.loads(res.read())
+                prompt_id = resp.get('prompt_id')
+                if not prompt_id:
+                    raise RuntimeError("ComfyUI 未返回 prompt_id: " + str(resp))
+
+                print(f"[Generate] Submitted {wf.upper()} prompt to ComfyUI, ID: {prompt_id}, seed: {cur_seed}")
+
+                # Poll ComfyUI history until completion
+                deadline = time.time() + 240
+                output_filename = None
+                while time.time() < deadline:
+                    time.sleep(2)
+                    try:
+                        hist_req = urllib.request.urlopen(f"{comfy_api}/history/{prompt_id}", timeout=5)
+                        hist_data = json.loads(hist_req.read())
+                        if prompt_id in hist_data:
+                            item = hist_data[prompt_id]
+                            status = item.get("status", {})
+                            if status.get("status_str") == "error":
+                                raise RuntimeError("ComfyUI 执行报错: " + str(status.get("messages")))
+                            
+                            outputs = item.get("outputs", {})
+                            if output_node_id in outputs and outputs[output_node_id].get("images"):
+                                output_filename = outputs[output_node_id]["images"][0]["filename"]
+                                print(f"[Generate] Image ready from node {output_node_id}: {output_filename}")
+                                break
+                    except urllib.error.URLError:
+                        pass
+
+                # Fallback: find newest image in output dir
+                if not output_filename and os.path.exists(output_dir):
+                    all_imgs = [os.path.join(output_dir, f) for f in os.listdir(output_dir) if f.lower().endswith(('.png', '.jpg', '.webp'))]
+                    if all_imgs:
+                        newest = max(all_imgs, key=os.path.getmtime)
+                        if time.time() - os.path.getmtime(newest) < 40:
+                            output_filename = os.path.basename(newest)
+
+                if output_filename:
+                    # Free ComfyUI VRAM cache after output
+                    try:
+                        free_req = urllib.request.Request(
+                            f"{comfy_api}/free",
+                            data=json.dumps({"unload_models": True, "free_memory": True}).encode("utf-8"),
+                            headers={"Content-Type": "application/json"}
+                        )
+                        urllib.request.urlopen(free_req, timeout=3)
+                    except Exception:
+                        pass
+
+                    rel_url = f"/api/view_image/{output_filename}"
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"status": "success", "image_url": rel_url, "seed": cur_seed}).encode('utf-8'))
+                else:
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"status": "error", "error": "等待生成超时，未获取到新渲染图片"}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "error": str(e)}).encode('utf-8'))
+
+def run_server():
+    cfg = anima_agent_bridge.get_config()
+    port = int(cfg.get("studio_port", 7860))
+    server = HTTPServer(('127.0.0.1', port), StudioHandler)
+    print(f"============================================================")
+    print(f" Anima Agent Studio GUI Running at http://127.0.0.1:{port}")
+    print(f" Supporting: Qwen-Image 2.1 Advanced & Anima AIO Yuri")
+    print(f"============================================================")
+    server.serve_forever()
+
+if __name__ == '__main__':
+    run_server()

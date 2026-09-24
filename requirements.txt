@@ -1,0 +1,7 @@
+# Core dependencies for Anima Agent Studio
+# Python 3.10+ recommended
+
+requests>=2.31.0
+huggingface_hub>=0.23.0
+pyyaml>=6.0.1
+Pillow>=10.0.0

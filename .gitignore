@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Configuration with local paths
+config.json
+
+# Image and media outputs
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.mp4
+output/
+ComfyUI/output/
+ComfyUI/input/
+
+# Model weights
+*.gguf
+*.safetensors
+*.ckpt
+*.bin
+*.pth
+*.pt
+models/
+
+# Logs & temp
+*.log
+logs/
+.system_generated/
+.user_uploaded/
+
+# Editors & OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
