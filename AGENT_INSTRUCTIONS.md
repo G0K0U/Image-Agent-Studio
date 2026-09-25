@@ -73,7 +73,7 @@ If user has Ollama, vLLM, LM Studio, or a running `llama-server`:
 Edit `config.json`:
 ```json
 {
-  "heretic_api_url": "http://127.0.0.1:18200/v1/chat/completions",
+  "heretic_api_url": "http://127.0.0.1:18205/v1/chat/completions",
   "heretic_model_name": "Qwen3.8-27B-Heretic-Ara-iq4_xs-3.0-mtp.gguf"
 }
 ```

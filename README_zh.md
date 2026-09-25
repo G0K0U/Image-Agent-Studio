@@ -80,7 +80,7 @@ python scripts/download_models.py --models-dir /path/to/ComfyUI/models
   "comfy_input_dir": "./ComfyUI/input",
   "comfy_output_dir": "./ComfyUI/output",
   "studio_port": 7860,
-  "heretic_api_url": "http://127.0.0.1:18200/v1/chat/completions",
+  "heretic_api_url": "http://127.0.0.1:18205/v1/chat/completions",
   "heretic_model_name": "Qwen3.8-27B-Heretic-Ara-iq4_xs-3.0-mtp.gguf"
 }
 ```

@@ -52,7 +52,7 @@ def get_config():
         "comfy_input_dir": resolve_path("comfy_input_dir", "./ComfyUI/input"),
         "comfy_output_dir": resolve_path("comfy_output_dir", "./ComfyUI/output"),
         "studio_port": cfg.get("studio_port", 7860),
-        "heretic_api_url": cfg.get("heretic_api_url", "http://127.0.0.1:18200/v1/chat/completions"),
+        "heretic_api_url": cfg.get("heretic_api_url", "http://127.0.0.1:18205/v1/chat/completions"),
         "heretic_model_name": cfg.get("heretic_model_name", "Qwen3.8-27B-Heretic-Ara-iq4_xs-3.0-mtp.gguf"),
         "heretic_runtime_exe": resolve_path("heretic_runtime_exe", ""),
         "heretic_model_path": resolve_path("heretic_model_path", ""),
@@ -66,6 +66,19 @@ def get_config():
     }
 
 CONFIG = get_config()
+
+def get_heretic_port(cfg=None):
+    if cfg is None:
+        cfg = get_config()
+    url = cfg.get("heretic_api_url", "")
+    try:
+        from urllib.parse import urlparse
+        p = urlparse(url).port
+        if p:
+            return p
+    except Exception:
+        pass
+    return 18205
 
 WH_RATIO_MAP = {
     "1:1": (1024, 1024),
@@ -98,26 +111,50 @@ def free_comfyui():
 def kill_heretic():
     cfg = get_config()
     exe = cfg["heretic_runtime_exe"]
-    if not exe or not os.path.exists(exe):
-        return
+    port = get_heretic_port(cfg)
 
-    exe_name = os.path.splitext(os.path.basename(exe))[0]
+    # 1. Kill any process listening on our Studio LLM port (e.g. 18205)
     try:
         if sys.platform == "win32":
             subprocess.run(
-                ["powershell", "-Command", f"Get-Process -Name '{exe_name}' -ErrorAction SilentlyContinue | Stop-Process -Force"],
+                ["powershell", "-Command", f"$p = (Get-NetTCPConnection -LocalPort {port} -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1).OwningProcess; if ($p) {{ Stop-Process -Id $p -Force }}"],
                 capture_output=True,
-                timeout=10
+                timeout=5
             )
-        else:
-            subprocess.run(["pkill", "-f", exe_name], capture_output=True, timeout=10)
     except Exception as e:
-        print("[Bridge] Error killing local LLM process:", e)
+        print(f"[Bridge] Error releasing port {port}:", e)
+
+    # 2. Terminate local LLM processes
+    if exe and os.path.exists(exe):
+        exe_name = os.path.splitext(os.path.basename(exe))[0]
+        try:
+            if sys.platform == "win32":
+                subprocess.run(
+                    ["powershell", "-Command", f"Get-Process -Name '{exe_name}','llama-kvmem-server','llama-server' -ErrorAction SilentlyContinue | Stop-Process -Force"],
+                    capture_output=True,
+                    timeout=5
+                )
+            else:
+                subprocess.run(["pkill", "-f", exe_name], capture_output=True, timeout=5)
+        except Exception as e:
+            print("[Bridge] Error killing local LLM process:", e)
+
+    # 3. Release any ninfer-serve process occupying GPU memory
+    try:
+        if sys.platform == "win32":
+            subprocess.run(
+                ["powershell", "-Command", "Get-Process -Name 'ninfer-serve' -ErrorAction SilentlyContinue | Stop-Process -Force"],
+                capture_output=True,
+                timeout=5
+            )
+    except Exception as e:
+        pass
 
 def start_heretic():
     cfg = get_config()
     exe = cfg["heretic_runtime_exe"]
     model = cfg["heretic_model_path"]
+    port = get_heretic_port(cfg)
     
     # If no local runtime is configured, assume external server is running
     if not exe or not os.path.exists(exe) or not model or not os.path.exists(model):
@@ -137,10 +174,13 @@ def start_heretic():
         "-n", "1024",
         "-ngl", str(cfg.get("heretic_gpu_layers", 99)),
         "--host", "127.0.0.1",
-        "--port", "18200",
+        "--port", str(port),
         "--no-ui"
     ]
     
+    if cfg.get("heretic_model_name"):
+        cmd.extend(["-a", cfg["heretic_model_name"]])
+
     if is_kvmem:
         cmd.extend(["--kvmem-gen-reserve", "1024"])
     elif cfg.get("heretic_threads"):
@@ -149,7 +189,7 @@ def start_heretic():
     if cfg.get("heretic_mmproj_path") and os.path.exists(cfg["heretic_mmproj_path"]):
         cmd.extend(["--mmproj", cfg["heretic_mmproj_path"], "--mmproj-offload"])
 
-    print(f"[Bridge] Starting local LLM server: {' '.join(cmd)}")
+    print(f"[Bridge] Starting local LLM server on port {port}: {' '.join(cmd)}")
     subprocess.Popen(
         cmd,
         stdout=subprocess.DEVNULL,
@@ -160,10 +200,11 @@ def start_heretic():
     # Wait for server readiness (model loading takes ~10-15s)
     deadline = time.time() + 60
     ready = False
+    health_url = f"http://127.0.0.1:{port}/health"
     while time.time() < deadline:
         time.sleep(1)
         try:
-            req = urllib.request.urlopen("http://127.0.0.1:18200/health", timeout=2)
+            req = urllib.request.urlopen(health_url, timeout=2)
             if req.status == 200:
                 ready = True
                 break
@@ -171,9 +212,9 @@ def start_heretic():
             pass
 
     if ready:
-        print("[Bridge] Local LLM Server is online!")
+        print(f"[Bridge] Local LLM Server on port {port} is online!")
     else:
-        print("[Bridge] Warning: Local LLM health check timed out, proceeding anyway...")
+        print(f"[Bridge] Warning: Local LLM health check on port {port} timed out, proceeding anyway...")
 
 def query_heretic(instruction, image_path=None, workflow="qwen"):
     cfg = get_config()
