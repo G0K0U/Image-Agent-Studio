@@ -814,11 +814,22 @@ class StudioHandler(BaseHTTPRequestHandler):
                         save_and_sanitize_image(image_b64.split(',', 1)[1], temp_img_path)
                         if "1608" in graph:
                             graph["1608"]["inputs"]["image"] = saved_filename
+                        if "1607" in graph:
+                            graph["1607"]["inputs"]["image"] = saved_filename
                         # Switch to Mode 2 (Img2Img) and disable Mode 4 (Empty Latent)
                         if "1603:1525" in graph:
                             graph["1603:1525"]["inputs"]["boolean"] = True
                         if "1603:1528" in graph:
                             graph["1603:1528"]["inputs"]["boolean"] = False
+                    elif not has_image:
+                        if "1607" in graph:
+                            graph["1607"]["inputs"]["image"] = "reference.png"
+                        if "1608" in graph:
+                            graph["1608"]["inputs"]["image"] = "reference.png"
+                        if "1603:1525" in graph:
+                            graph["1603:1525"]["inputs"]["boolean"] = False
+                        if "1603:1528" in graph:
+                            graph["1603:1528"]["inputs"]["boolean"] = True
 
                     if data.get("prompt") and "1610" in graph:
                         graph["1610"]["inputs"]["value"] = data["prompt"]
@@ -895,6 +906,18 @@ class StudioHandler(BaseHTTPRequestHandler):
                                 output_filename = outputs[output_node_id]["images"][0]["filename"]
                                 print(f"[Generate] Image ready from node {output_node_id}: {output_filename}")
                                 break
+                            
+                            # If prompt finished execution:
+                            if status.get("completed", False):
+                                for onid, out_obj in outputs.items():
+                                    if out_obj.get("images"):
+                                        output_filename = out_obj["images"][0]["filename"]
+                                        print(f"[Generate] Image ready from alternative node {onid}: {output_filename}")
+                                        break
+                                if output_filename:
+                                    break
+                                # Execution finished with no outputs produced
+                                raise RuntimeError("ComfyUI 执行已结束，但未产生输出图像（请检查输入图像或节点状态）")
                     except urllib.error.URLError:
                         pass
 

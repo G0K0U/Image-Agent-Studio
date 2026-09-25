@@ -445,10 +445,12 @@ def apply_to_anima_workflow(params, saved_image_filename=None):
         elif "denoise" not in fd or fd["denoise"] > 0.4:
             fd["denoise"] = 0.30
 
-    # 1608: LoadImage & Mode Switching (Img2Img vs Text2Img)
+    # 1607 & 1608: LoadImage & Mode Switching (Img2Img vs Text2Img)
     if saved_image_filename:
         if "1608" in graph:
             graph["1608"]["inputs"]["image"] = saved_image_filename
+        if "1607" in graph:
+            graph["1607"]["inputs"]["image"] = saved_image_filename
         # Enable Mode 2 (Img2Img), disable Mode 4 (Empty Latent)
         if "1603:1525" in graph:
             graph["1603:1525"]["inputs"]["boolean"] = True
@@ -458,7 +460,11 @@ def apply_to_anima_workflow(params, saved_image_filename=None):
         if "118" in graph and "denoise" not in params:
             graph["118"]["inputs"]["denoise"] = 0.50
     else:
-        # Pure Text-to-Image mode
+        # Pure Text-to-Image mode: use fallback valid image to ensure ComfyUI graph passes pre-validation
+        if "1607" in graph:
+            graph["1607"]["inputs"]["image"] = "reference.png"
+        if "1608" in graph:
+            graph["1608"]["inputs"]["image"] = "reference.png"
         if "1603:1525" in graph:
             graph["1603:1525"]["inputs"]["boolean"] = False
         if "1603:1528" in graph:
