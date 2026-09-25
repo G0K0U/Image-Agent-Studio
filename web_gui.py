@@ -382,6 +382,32 @@ HTML_CONTENT = """<!DOCTYPE html>
       }
     }
 
+    function showNotification(title, body) {
+      if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+          try {
+            const notif = new Notification(title, { body: body });
+            notif.onclick = function() {
+              window.focus();
+              notif.close();
+            };
+          } catch (e) {}
+        } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+              try {
+                const notif = new Notification(title, { body: body });
+                notif.onclick = function() {
+                  window.focus();
+                  notif.close();
+                };
+              } catch (e) {}
+            }
+          });
+        }
+      }
+    }
+
     async function sendToAgent() {
       const instruction = document.getElementById('instruction').value.trim();
       if (!instruction) {
@@ -408,6 +434,7 @@ HTML_CONTENT = """<!DOCTYPE html>
         if (ret.status === 'success') {
           appendLog('✅ Agent 规划完成，已即刻卸载释放显存！');
           appendLog('已成功应用新提示词与参数！');
+          showNotification('Image Agent Studio', '🧠 Agent 规划完成，已成功应用新提示词与参数！');
           await fetchStatus();
         } else {
           appendLog('❌ Agent 规划错误: ' + (ret.error || '未知错误'));
@@ -460,6 +487,7 @@ HTML_CONTENT = """<!DOCTYPE html>
           placeholder.style.display = 'none';
           genInfo.innerText = `引擎: ${wf.toUpperCase()} | 耗时: ${duration}s | 种子: ${data.seed || '随机'}`;
           appendLog(`🎉 图像生成成功！渲染耗时: ${duration}秒`);
+          showNotification('Image Agent Studio', `🎨 图像渲染完成！生成耗时: ${duration}秒`);
         } else {
           placeholder.innerHTML = '<p style="color: #ef4444;">❌ 生成失败</p><p style="font-size: 12px; margin-top: 4px;">' + (data.error || '未知错误') + '</p>';
           appendLog('❌ 生成失败: ' + (data.error || '未知错误'));
@@ -475,6 +503,9 @@ HTML_CONTENT = """<!DOCTYPE html>
 
     window.onload = function() {
       onWorkflowChange();
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
     };
   </script>
 </body>
@@ -577,6 +608,28 @@ def save_and_sanitize_image(b64_raw, out_path, max_dim=1280):
         with open(out_path, "wb") as f:
             f.write(raw_bytes)
 
+def send_windows_toast(title, message):
+    ps1_path = os.path.join(SCRIPT_DIR, "send_toast.ps1")
+    if os.path.exists(ps1_path):
+        cmd = [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy", "Bypass",
+            "-File", ps1_path,
+            "-Title", title,
+            "-Message", message
+        ]
+        try:
+            import subprocess
+            subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+            )
+        except Exception as e:
+            print("[Toast Error]:", e)
+
 class StudioHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         return
@@ -673,6 +726,7 @@ class StudioHandler(BaseHTTPRequestHandler):
                     print("[Studio] Releasing LLM from VRAM handover...")
                     image_agent_bridge.kill_heretic()
 
+                send_windows_toast("Image Agent Studio", f"🧠 [{wf.upper()}] Agent 规划完成，工作流参数已就绪！")
                 status = get_status_for_workflow(wf, has_image=bool(saved_filename))
                 res_data = {"status": "success", "args": status}
                 
@@ -690,6 +744,7 @@ class StudioHandler(BaseHTTPRequestHandler):
 
         elif parsed.path == '/api/generate':
             try:
+                t_start = time.time()
                 data = json.loads(post_body.decode('utf-8')) if post_body else {}
                 wf = data.get('workflow', 'qwen')
                 
@@ -863,6 +918,8 @@ class StudioHandler(BaseHTTPRequestHandler):
                     except Exception:
                         pass
 
+                    elapsed = round(time.time() - t_start, 1)
+                    send_windows_toast("Image Agent Studio", f"🎨 [{wf.upper()}] 图像渲染完成！生成耗时约 {elapsed} 秒")
                     rel_url = f"/api/view_image/{output_filename}"
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
