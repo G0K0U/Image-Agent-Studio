@@ -14,6 +14,10 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+
 import json
 import time
 import base64
@@ -70,10 +74,15 @@ HTML_CONTENT = """<!DOCTYPE html>
     .placeholder { color: var(--muted); text-align: center; }
     .spinner { border: 4px solid #232838; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 16px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .thumb-preview { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); margin-right: 10px; }
+    .thumb-preview { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); flex-shrink: 0; }
     .workflow-pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 6px; }
     .pill-qwen { background: #0284c722; color: #38bdf8; border: 1px solid #0284c744; }
     .pill-anima { background: #ec489922; color: #f472b6; border: 1px solid #ec489944; }
+    .dropzone { border: 2px dashed var(--border); border-radius: 8px; padding: 12px; text-align: center; background: #0b0d13; cursor: pointer; transition: all 0.2s ease; margin-top: 4px; }
+    .dropzone:hover { border-color: var(--primary); background: #10131d; }
+    .dropzone.drag-active { border-color: #38bdf8 !important; background: #0284c718 !important; box-shadow: 0 0 16px rgba(56, 189, 248, 0.35); }
+    .dropzone-content { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; pointer-events: none; }
+    .dropzone-loaded { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   </style>
 </head>
 <body>
@@ -97,12 +106,36 @@ HTML_CONTENT = """<!DOCTYPE html>
         <div class="card-title" style="margin-top: 14px;">🤖 Prompt Instruction / Vision Edit / 自然语言指令</div>
         <textarea id="instruction" rows="3" placeholder="e.g. A hyper-realistic cyberpunk street with neon reflections, silver-haired anime girl with translucent umbrella, cinematic lighting..."></textarea>
         
-        <div style="margin-bottom: 10px;">
-          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">Reference Image / 参考底图 (Optional for I2I / Local Editing):</label>
-          <div style="display: flex; align-items: center;">
-            <img id="refThumb" class="thumb-preview" style="display: none;">
-            <input type="file" id="refImage" accept="image/*" style="font-size: 12px; padding: 6px; margin-bottom: 0;">
-            <button id="btnClearImg" onclick="clearImage()" style="width: auto; padding: 6px 10px; margin-left: 6px; font-size: 11px; background: #334155; display: none;">Clear / 清除</button>
+        <div style="margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <label style="font-size: 11px; color: var(--muted);">Reference Image / 参考底图 (支持复制粘贴与拖入):</label>
+            <span id="refBadge" style="font-size: 10px; color: #10b981; display: none;">● 图生图模式已激活</span>
+          </div>
+          
+          <div id="dropZone" class="dropzone" onclick="document.getElementById('refImage').click()">
+            <input type="file" id="refImage" accept="image/*" style="display: none;">
+            
+            <div id="dropPrompt" class="dropzone-content">
+              <svg style="width: 24px; height: 24px; opacity: 0.7; margin-bottom: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <span>📂 点击选择、<strong>直接拖入图片</strong> 或 <strong>Ctrl+V 粘贴</strong></span>
+              <span style="font-size: 11px; color: #64748b;">支持截图工具、浏览器图片直接拖入或剪贴板粘贴</span>
+            </div>
+
+            <div id="dropLoaded" class="dropzone-loaded" style="display: none;" onclick="event.stopPropagation();">
+              <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                <img id="refThumb" class="thumb-preview" alt="参考底图" style="cursor: pointer;" onclick="window.open(this.src)" title="点击新窗口查看原图">
+                <div style="text-align: left; overflow: hidden;">
+                  <div id="refImgName" style="font-size: 12px; font-weight: 600; color: #f8fafc; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">参考图已就绪</div>
+                  <div id="refImgSize" style="font-size: 10px; color: var(--muted);">正在读取尺寸...</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                <button type="button" onclick="document.getElementById('refImage').click()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #334155;">更换</button>
+                <button type="button" id="btnClearImg" onclick="clearImage()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #ef444422; color: #f87171; border: 1px solid #ef444444;">移除</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -179,27 +212,110 @@ HTML_CONTENT = """<!DOCTYPE html>
     let currentImageBase64 = null;
     let initialImageLoaded = false;
 
-    document.getElementById('refImage').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
+    function handleImageFile(file, sourceName) {
+      if (!file || !file.type.startsWith('image/')) {
+        appendLog('⚠️ 忽略非图片文件: ' + (file ? file.type : '未知'));
+        return;
+      }
       const reader = new FileReader();
       reader.onload = function(evt) {
         currentImageBase64 = evt.target.result;
-        const thumb = document.getElementById('refThumb');
-        thumb.src = currentImageBase64;
-        thumb.style.display = 'block';
-        document.getElementById('btnClearImg').style.display = 'inline-block';
-        appendLog('已加载参考底图：' + file.name + '，自动进入【图生图/图像编辑】模式');
+        
+        document.getElementById('dropPrompt').style.display = 'none';
+        document.getElementById('dropLoaded').style.display = 'flex';
+        document.getElementById('refThumb').src = currentImageBase64;
+        document.getElementById('refBadge').style.display = 'inline';
+        document.getElementById('refImgName').innerText = sourceName || file.name || '参考图已载入';
+        
+        const tmpImg = new Image();
+        tmpImg.onload = function() {
+          document.getElementById('refImgSize').innerText = tmpImg.width + ' × ' + tmpImg.height + ' px';
+        };
+        tmpImg.src = currentImageBase64;
+
+        appendLog('✅ 已成功加载参考底图：' + (sourceName || file.name) + '，自动进入【图生图/图像编辑】模式');
         fetchStatus();
       };
       reader.readAsDataURL(file);
+    }
+
+    document.getElementById('refImage').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) handleImageFile(file, file.name);
+    });
+
+    // 拖拽支持 (Drag and Drop)
+    const dropZone = document.getElementById('dropZone');
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add('drag-active');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('drag-active');
+      }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length > 0) {
+        for (let i = 0; i < dt.files.length; i++) {
+          if (dt.files[i].type.startsWith('image/')) {
+            handleImageFile(dt.files[i], dt.files[i].name);
+            break;
+          }
+        }
+      }
+    });
+
+    // 全局窗口拖入支持
+    window.addEventListener('dragover', (e) => e.preventDefault(), false);
+    window.addEventListener('drop', (e) => {
+      if (e.target.closest('#dropZone')) return;
+      e.preventDefault();
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length > 0) {
+        for (let i = 0; i < dt.files.length; i++) {
+          if (dt.files[i].type.startsWith('image/')) {
+            handleImageFile(dt.files[i], '拖拽文件: ' + dt.files[i].name);
+            break;
+          }
+        }
+      }
+    }, false);
+
+    // 剪贴板粘贴支持 (Paste / Ctrl+V)
+    window.addEventListener('paste', function(e) {
+      const clipboardData = e.clipboardData || window.clipboardData;
+      if (!clipboardData) return;
+      const items = clipboardData.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            handleImageFile(file, '剪贴板图片 (' + new Date().toLocaleTimeString() + ')');
+            e.preventDefault();
+            return;
+          }
+        }
+      }
     });
 
     function clearImage() {
       currentImageBase64 = null;
       document.getElementById('refImage').value = '';
-      document.getElementById('refThumb').style.display = 'none';
-      document.getElementById('btnClearImg').style.display = 'none';
+      document.getElementById('dropPrompt').style.display = 'flex';
+      document.getElementById('dropLoaded').style.display = 'none';
+      document.getElementById('refBadge').style.display = 'none';
+      document.getElementById('refThumb').src = '';
       appendLog('已移除参考底图，将执行【文生图】');
       fetchStatus();
     }
@@ -242,7 +358,7 @@ HTML_CONTENT = """<!DOCTYPE html>
         const data = await res.json();
         document.getElementById('pSteps').value = data.steps || (wf === 'qwen' ? 40 : 28);
         document.getElementById('pCFG').value = data.cfg !== undefined ? data.cfg : (wf === 'qwen' ? 1.0 : 4.0);
-        document.getElementById('pRatioOrDenoise').value = data.wh_ratio || data.denoise || (wf === 'qwen' ? '2:3' : 0.55);
+        document.getElementById('pRatioOrDenoise').value = data.wh_ratio || data.denoise || (wf === 'qwen' ? '2:3' : 0.50);
         document.getElementById('pSeed').value = data.seed !== undefined ? data.seed : -1;
         document.getElementById('pPrompt').value = data.prompt || '';
         document.getElementById('pNegPrompt').value = data.negative_prompt || '';
@@ -415,7 +531,7 @@ def get_status_for_workflow(wf="qwen", has_image=None):
                     inp = data["118"].get("inputs", {})
                     status["steps"] = inp.get("steps", 28)
                     status["cfg"] = inp.get("cfg", 4.0)
-                    status["denoise"] = inp.get("denoise", 0.55)
+                    status["denoise"] = inp.get("denoise", 0.50)
                     status["seed"] = inp.get("seed", -1)
                 for nid in ["1381", "1382", "1383", "1384", "1697"]:
                     if nid in data:
@@ -435,6 +551,31 @@ def get_status_for_workflow(wf="qwen", has_image=None):
             status["latest_image"] = f"/api/view_image/{os.path.basename(newest)}"
             
     return status
+
+def save_and_sanitize_image(b64_raw, out_path, max_dim=1280):
+    raw_bytes = base64.b64decode(b64_raw)
+    try:
+        from PIL import Image
+        import io
+        with Image.open(io.BytesIO(raw_bytes)) as img:
+            img = img.convert("RGB")
+            w, h = img.size
+            if max(w, h) > max_dim:
+                scale = max_dim / max(w, h)
+                new_w = (int(w * scale) // 8) * 8
+                new_h = (int(h * scale) // 8) * 8
+                img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            else:
+                new_w = (w // 8) * 8
+                new_h = (h // 8) * 8
+                if (new_w, new_h) != (w, h):
+                    img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            img.save(out_path, format="JPEG", quality=95)
+            print(f"[Studio] Input image sanitized & resized: {new_w}x{new_h} -> {out_path}")
+    except Exception as e:
+        print("[Studio] Note: image sanitization fallback:", e)
+        with open(out_path, "wb") as f:
+            f.write(raw_bytes)
 
 class StudioHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -493,7 +634,6 @@ class StudioHandler(BaseHTTPRequestHandler):
                 self.end_headers()
         else:
             self.send_response(404)
-            self.end_headers()
 
     def do_POST(self):
         cfg = image_agent_bridge.get_config()
@@ -518,9 +658,7 @@ class StudioHandler(BaseHTTPRequestHandler):
                     os.makedirs(input_dir, exist_ok=True)
                     saved_filename = f"agent_ref_{int(time.time())}.jpg"
                     temp_img_path = os.path.join(input_dir, saved_filename)
-                    b64_raw = image_b64.split(',', 1)[1]
-                    with open(temp_img_path, 'wb') as f:
-                        f.write(base64.b64decode(b64_raw))
+                    save_and_sanitize_image(image_b64.split(',', 1)[1], temp_img_path)
 
                 print(f"[Studio] Calling LLM Agent for [{wf.upper()}] with instruction: {instruction}")
                 try:
@@ -580,9 +718,7 @@ class StudioHandler(BaseHTTPRequestHandler):
                         os.makedirs(input_dir, exist_ok=True)
                         saved_filename = f"agent_ref_{int(time.time())}.jpg"
                         temp_img_path = os.path.join(input_dir, saved_filename)
-                        b64_raw = image_b64.split(',', 1)[1]
-                        with open(temp_img_path, 'wb') as f:
-                            f.write(base64.b64decode(b64_raw))
+                        save_and_sanitize_image(image_b64.split(',', 1)[1], temp_img_path)
                         if "9" in graph:
                             graph["9"]["inputs"]["image"] = saved_filename
 
@@ -612,6 +748,23 @@ class StudioHandler(BaseHTTPRequestHandler):
                     with open(target_workflow, 'r', encoding='utf-8') as f:
                         graph = json.load(f)
 
+                    # Handle uploaded image for Anima
+                    has_image = data.get("has_image", False)
+                    image_b64 = data.get("image")
+                    saved_filename = None
+                    if (has_image or image_b64) and image_b64 and ',' in image_b64:
+                        os.makedirs(input_dir, exist_ok=True)
+                        saved_filename = f"agent_ref_{int(time.time())}.jpg"
+                        temp_img_path = os.path.join(input_dir, saved_filename)
+                        save_and_sanitize_image(image_b64.split(',', 1)[1], temp_img_path)
+                        if "1608" in graph:
+                            graph["1608"]["inputs"]["image"] = saved_filename
+                        # Switch to Mode 2 (Img2Img) and disable Mode 4 (Empty Latent)
+                        if "1603:1525" in graph:
+                            graph["1603:1525"]["inputs"]["boolean"] = True
+                        if "1603:1528" in graph:
+                            graph["1603:1528"]["inputs"]["boolean"] = False
+
                     if data.get("prompt") and "1610" in graph:
                         graph["1610"]["inputs"]["value"] = data["prompt"]
                     if data.get("negative_prompt") and "1611" in graph:
@@ -623,14 +776,35 @@ class StudioHandler(BaseHTTPRequestHandler):
                         if data.get("ratio_or_denoise"):
                             try: ks["denoise"] = float(data["ratio_or_denoise"])
                             except ValueError: pass
+                        
+                        # In image-to-image mode, clamp denoise to safe golden range (0.50) if too high
+                        if (has_image or saved_filename) and ks.get("denoise", 0.50) > 0.55:
+                            print(f"[Studio] Clamping denoise from {ks.get('denoise')} to 0.50 to protect character features & stockings")
+                            ks["denoise"] = 0.50
+
                         if data.get("seed") and str(data["seed"]).strip() != "-1":
                             try: cur_seed = int(data["seed"])
                             except ValueError: pass
                         ks["seed"] = cur_seed
 
+                    # Sync seed to FaceDetailer if present
+                    if "1701" in graph:
+                        graph["1701"]["inputs"]["seed"] = cur_seed
+
                     with open(target_workflow, 'w', encoding='utf-8') as f:
                         json.dump(graph, f, ensure_ascii=False, indent=2)
                     output_node_id = "1649"
+
+                # Free leftover VRAM so WanVAE runs on GPU in 0.2s without CPU fallback or timeout
+                try:
+                    free_req = urllib.request.Request(
+                        f"{comfy_api}/free",
+                        data=json.dumps({"unload_models": True, "free_memory": True}).encode("utf-8"),
+                        headers={"Content-Type": "application/json"}
+                    )
+                    urllib.request.urlopen(free_req, timeout=3)
+                except Exception:
+                    pass
 
                 # Submit to ComfyUI API (/prompt)
                 req = urllib.request.Request(
@@ -647,8 +821,8 @@ class StudioHandler(BaseHTTPRequestHandler):
 
                 print(f"[Generate] Submitted {wf.upper()} prompt to ComfyUI, ID: {prompt_id}, seed: {cur_seed}")
 
-                # Poll ComfyUI history until completion
-                deadline = time.time() + 240
+                # Poll ComfyUI history until completion (up to 10 minutes)
+                deadline = time.time() + 600
                 output_filename = None
                 while time.time() < deadline:
                     time.sleep(2)

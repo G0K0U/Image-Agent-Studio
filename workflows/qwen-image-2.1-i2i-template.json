@@ -26,7 +26,7 @@
         "2",
         0
       ],
-      "prompt": "keep the character appearance, face, pose, and background intact, modify the outfit details smoothly",
+      "prompt": "high quality anime illustration, cinematic lighting, detailed background and character features, masterwork",
       "negative_prompt": "",
       "resolution": 1024,
       "vae": [

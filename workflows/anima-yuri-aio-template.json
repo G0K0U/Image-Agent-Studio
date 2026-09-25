@@ -6,7 +6,7 @@
       "cfg": 4.0,
       "sampler_name": "euler",
       "scheduler": "simple",
-      "denoise": 0.55,
+      "denoise": 0.5,
       "model": [
         "121",
         1
@@ -189,7 +189,7 @@
         "type": "PowerLoraLoaderHeaderWidget"
       },
       "lora_1": {
-        "on": true,
+        "on": false,
         "lora": "Anima\\画风\\Scenery_enchancer-Anima-P3.safetensors",
         "strength": 0.4999999999999997
       },
@@ -199,7 +199,7 @@
         "strength": 0.4999999999999996
       },
       "lora_3": {
-        "on": true,
+        "on": false,
         "lora": "画风\\bakaE79AAEE882A4.Md2S.safetensors",
         "strength": 0.4499999999999996
       },
@@ -209,7 +209,7 @@
         "strength": 0.6999999999999997
       },
       "lora_5": {
-        "on": true,
+        "on": false,
         "lora": "Anima-半写实动漫.safetensors",
         "strength": 1
       },
@@ -236,15 +236,15 @@
       "lora_1": {
         "on": true,
         "lora": "Anima\\anima_context_detailer_base10.safetensors",
-        "strength": 0.5
+        "strength": 0.35
       },
       "lora_2": {
         "on": true,
         "lora": "画风\\anima-highres-aesthetic-boost.safetensors",
-        "strength": 0.5
+        "strength": 0.35
       },
       "lora_3": {
-        "on": true,
+        "on": false,
         "lora": "画风\\Anima_colorfix_v1_by_Volnovik.safetensors",
         "strength": 0.29999999999999993
       },
@@ -265,7 +265,7 @@
   },
   "1607": {
     "inputs": {
-      "image": "agent_ref_1790255938.jpg"
+      "image": "reference.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -277,7 +277,7 @@
   },
   "1608": {
     "inputs": {
-      "image": "input.png"
+      "image": "reference.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -319,7 +319,7 @@
   },
   "1610": {
     "inputs": {
-      "value": "masterpiece, best quality, absurdres, 1girl, solo, anime aesthetic"
+      "value": "(masterpiece, best quality, absurdres:1.2), (anime style:1.3), 1girl, solo, anime aesthetic, detailed hair and eyes, intricate clothing details, looking at viewer, dynamic pose, high quality anime illustration"
     },
     "class_type": "String",
     "_meta": {
@@ -328,7 +328,7 @@
   },
   "1611": {
     "inputs": {
-      "value": "worst quality, low quality, bad anatomy, bad hands, missing fingers, extra limbs"
+      "value": "(worst quality, low quality:1.4), (bad anatomy, bad hands:1.2), (blurry, watermark:1.2), (3d, realistic, photo:1.3)"
     },
     "class_type": "String",
     "_meta": {
@@ -337,9 +337,9 @@
   },
   "1649": {
     "inputs": {
-      "filename_prefix": "test_style_d55",
+      "filename_prefix": "Studio_Anima",
       "images": [
-        "119",
+        "1701",
         0
       ]
     },
@@ -1123,6 +1123,69 @@
     "class_type": "Context Big (rgthree)",
     "_meta": {
       "title": "Context Big (rgthree)"
+    }
+  },
+  "1700": {
+    "class_type": "UltralyticsDetectorProvider",
+    "inputs": {
+      "model_name": "bbox/face_yolov8m.pt"
+    }
+  },
+  "1701": {
+    "class_type": "FaceDetailer",
+    "inputs": {
+      "image": [
+        "119",
+        0
+      ],
+      "model": [
+        "121",
+        1
+      ],
+      "clip": [
+        "121",
+        2
+      ],
+      "vae": [
+        "121",
+        3
+      ],
+      "guide_size": 512.0,
+      "guide_size_for": true,
+      "max_size": 1024.0,
+      "seed": 0,
+      "steps": 20,
+      "cfg": 4.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "positive": [
+        "121",
+        4
+      ],
+      "negative": [
+        "121",
+        5
+      ],
+      "denoise": 0.3,
+      "feather": 5,
+      "noise_mask": true,
+      "force_inpaint": true,
+      "bbox_threshold": 0.5,
+      "bbox_dilation": 10,
+      "bbox_crop_factor": 3.0,
+      "sam_detection_hint": "center-1",
+      "sam_dilation": 0,
+      "sam_threshold": 0.93,
+      "sam_bbox_expansion": 0,
+      "sam_mask_hint_threshold": 0.7,
+      "sam_mask_hint_use_negative": "False",
+      "drop_size": 10,
+      "bbox_detector": [
+        "1700",
+        0
+      ],
+      "wildcard": "",
+      "cycle": 1
     }
   }
 }

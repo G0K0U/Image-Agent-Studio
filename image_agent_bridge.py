@@ -127,17 +127,27 @@ def start_heretic():
     kill_heretic()
     free_comfyui()
 
+    exe_name = os.path.basename(exe).lower()
+    is_kvmem = "kvmem" in exe_name
+
     cmd = [
         exe,
         "-m", model,
-        "-c", str(cfg["heretic_ctx_size"]),
-        "-ngl", str(cfg["heretic_gpu_layers"]),
-        "-t", str(cfg["heretic_threads"]),
+        "-c", str(cfg.get("heretic_ctx_size", 8192)),
+        "-n", "1024",
+        "-ngl", str(cfg.get("heretic_gpu_layers", 99)),
         "--host", "127.0.0.1",
-        "--port", "18200"
+        "--port", "18200",
+        "--no-ui"
     ]
-    if cfg["heretic_mmproj_path"] and os.path.exists(cfg["heretic_mmproj_path"]):
-        cmd.extend(["--mmproj", cfg["heretic_mmproj_path"], "--no-mmproj-offload"])
+    
+    if is_kvmem:
+        cmd.extend(["--kvmem-gen-reserve", "1024"])
+    elif cfg.get("heretic_threads"):
+        cmd.extend(["-t", str(cfg["heretic_threads"])])
+
+    if cfg.get("heretic_mmproj_path") and os.path.exists(cfg["heretic_mmproj_path"]):
+        cmd.extend(["--mmproj", cfg["heretic_mmproj_path"], "--mmproj-offload"])
 
     print(f"[Bridge] Starting local LLM server: {' '.join(cmd)}")
     subprocess.Popen(
@@ -147,8 +157,8 @@ def start_heretic():
         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
     )
 
-    # Wait for server readiness
-    deadline = time.time() + 30
+    # Wait for server readiness (model loading takes ~10-15s)
+    deadline = time.time() + 60
     ready = False
     while time.time() < deadline:
         time.sleep(1)
@@ -169,16 +179,33 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
     cfg = get_config()
     api_url = cfg["heretic_api_url"]
     model_name = cfg["heretic_model_name"]
+    exe_name = os.path.basename(cfg.get("heretic_runtime_exe", "")).lower()
+    is_kvmem = "kvmem" in exe_name
     
     user_content = []
     if image_path and os.path.exists(image_path):
-        with open(image_path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode("utf-8")
-        ext = os.path.splitext(image_path)[1].lower().replace(".", "")
-        if ext == "jpg": ext = "jpeg"
+        b64 = None
+        try:
+            from PIL import Image
+            import io
+            with Image.open(image_path) as img:
+                img = img.convert("RGB")
+                w, h = img.size
+                max_dim = 768
+                if max(w, h) > max_dim:
+                    scale = max_dim / max(w, h)
+                    img = img.resize((int(w * scale), int(h * scale)), Image.Resampling.LANCZOS)
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=85)
+                b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+        except Exception as e:
+            print("[Bridge] Image resizing fallback to raw:", e)
+            with open(image_path, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode("utf-8")
+
         user_content.append({
             "type": "image_url",
-            "image_url": {"url": f"data:image/{ext};base64,{b64}"}
+            "image_url": {"url": f"data:image/jpeg;base64,{b64}"}
         })
 
     if workflow == "qwen":
@@ -224,19 +251,22 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             "- Scenery_enchancer (权重 0.7): 唯美风景、自然光照\n"
             "- darklight (权重 0.65): 暗黑风、深邃阴影、高对比度\n\n"
             "【严格要求】：\n"
-            "1. 如果有参考图，正向提示词 (prompt) 必须准确识别并保留原图中的角色特征（如角色名、发色发型、眼眸、衣着配饰、躺卧或站立姿势构图等），并精准融合用户指令的改动。\n"
-            "2. 负向提示词 (negative_prompt) 必须加入对修改前状态的否定。\n"
-            "3. 输出必须是合法 JSON 字符串，包含以下键：\n"
+            "1. 如果有参考图，正向提示词 (prompt) 必须准确识别并保留原图中的角色特征（如二次元画风、角色名、黑发发型、眼眸、女仆发饰、黑丝/连裤袜、躺卧或站立姿势构图等），严禁随意篡改发色或服装材质。\n"
+            "2. 正向开头必须强制加上画风锚定词：`(anime style:1.3), (masterpiece, best quality, absurdres:1.2)`，负向提示词必须包含 `(worst quality:1.4), (3d, realistic, photo:1.3)`，严禁生成写实真人质感。\n"
+            "3. 去噪强度 (denoise) 选择黄金法则（极其关键）：\n"
+            "   - 保持姿势、原图画风、服装材质、人物五官发饰（图生图）：必须严格设置为 0.50！\n"
+            "   - 去噪度超过 0.60 会导致原图结构与五官面部走样，因此图生图一律严禁超过 0.55！\n"
+            "4. 输出必须是合法 JSON 字符串，包含以下键：\n"
             "```json\n"
             "{\n"
-            '  "prompt": "(masterpiece, best quality, absurdres:1.2), ...",\n'
-            '  "negative_prompt": "(worst quality, low quality:1.4), ...",\n'
+            '  "prompt": "(masterpiece, best quality, absurdres:1.2), (anime style:1.3), 1girl, solo, anime aesthetic, detailed hair and eyes, elegant outfit, looking at viewer, ...",\n'
+            '  "negative_prompt": "(worst quality, low quality:1.4), (3d, realistic, photo:1.3), bad anatomy, bad hands, blurry, watermark, ...",\n'
             '  "steps": 28,\n'
             '  "cfg": 4.0,\n'
-            '  "denoise": 0.55,\n'
+            '  "denoise": 0.50,\n'
             '  "seed": -1,\n'
-            '  "enable_lora": "RealSkin,aesthetic,detailer",\n'
-            '  "strength": 0.5\n'
+            '  "enable_lora": "aesthetic,detailer",\n'
+            '  "strength": 0.35\n'
             "}\n"
             "```\n"
             "只输出 JSON 代码块，绝不要输出额外开场白或解释。"
@@ -272,7 +302,19 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
         json_text = json_text.split("```json", 1)[1].split("```", 1)[0].strip()
     elif "```" in json_text:
         json_text = json_text.split("```", 1)[1].split("```", 1)[0].strip()
-    return json.loads(json_text)
+
+    try:
+        return json.loads(json_text)
+    except Exception as je:
+        print(f"[Bridge] Warning: JSON decode failed ({je}), attempting repair on:\n{json_text}")
+        if not json_text.endswith("}"):
+            last_comma = json_text.rfind(",")
+            if last_comma != -1:
+                try:
+                    return json.loads(json_text[:last_comma] + "\n}")
+                except Exception:
+                    pass
+        raise je
 
 def apply_to_qwen_workflow(params, saved_image_filename=None):
     cfg = get_config()
@@ -323,13 +365,22 @@ def apply_to_anima_workflow(params, saved_image_filename=None):
 
     # 1610: Positive Prompt
     if "1610" in graph and "prompt" in params:
-        graph["1610"]["inputs"]["value"] = params["prompt"]
+        p_val = params["prompt"]
+        if "anime style" not in p_val.lower():
+            p_val = "(anime style:1.3), " + p_val
+        graph["1610"]["inputs"]["value"] = p_val
 
     # 1611: Negative Prompt
     if "1611" in graph and "negative_prompt" in params:
-        graph["1611"]["inputs"]["value"] = params["negative_prompt"]
+        n_val = params["negative_prompt"]
+        if "3d" not in n_val.lower():
+            n_val = "(3d, realistic, photo:1.3), " + n_val
+        graph["1611"]["inputs"]["value"] = n_val
 
     # 118: KSampler
+    s = int(params.get("seed", -1))
+    cur_seed = random.randint(1, 10**15) if s == -1 else s
+
     if "118" in graph:
         ks = graph["118"]["inputs"]
         if "steps" in params:
@@ -337,35 +388,90 @@ def apply_to_anima_workflow(params, saved_image_filename=None):
         if "cfg" in params:
             ks["cfg"] = float(params["cfg"])
         if "denoise" in params:
-            ks["denoise"] = float(params["denoise"])
-        s = int(params.get("seed", -1))
-        ks["seed"] = random.randint(1, 10**15) if s == -1 else s
+            d = float(params["denoise"])
+            if saved_image_filename and d > 0.55:
+                print(f"[Bridge] Denoise {d} safely clamped to 0.50 to preserve stockings & character fidelity")
+                d = 0.50
+            ks["denoise"] = d
+        ks["seed"] = cur_seed
 
-    # 1608: LoadImage
-    if saved_image_filename and "1608" in graph:
-        graph["1608"]["inputs"]["image"] = saved_image_filename
+    # 1701: FaceDetailer (sync seed & ensure reasonable denoise for face lock)
+    if "1701" in graph:
+        fd = graph["1701"]["inputs"]
+        fd["seed"] = cur_seed
+        if "face_denoise" in params:
+            fd["denoise"] = float(params["face_denoise"])
+        elif "denoise" not in fd or fd["denoise"] > 0.4:
+            fd["denoise"] = 0.30
 
-    # LoRA Stacking
+    # 1608: LoadImage & Mode Switching (Img2Img vs Text2Img)
+    if saved_image_filename:
+        if "1608" in graph:
+            graph["1608"]["inputs"]["image"] = saved_image_filename
+        # Enable Mode 2 (Img2Img), disable Mode 4 (Empty Latent)
+        if "1603:1525" in graph:
+            graph["1603:1525"]["inputs"]["boolean"] = True
+        if "1603:1528" in graph:
+            graph["1603:1528"]["inputs"]["boolean"] = False
+        # Set golden denoise 0.50 for img2img if not specified
+        if "118" in graph and "denoise" not in params:
+            graph["118"]["inputs"]["denoise"] = 0.50
+    else:
+        # Pure Text-to-Image mode
+        if "1603:1525" in graph:
+            graph["1603:1525"]["inputs"]["boolean"] = False
+        if "1603:1528" in graph:
+            graph["1603:1528"]["inputs"]["boolean"] = True
+        if "118" in graph and "denoise" not in params:
+            graph["118"]["inputs"]["denoise"] = 1.0
+
+    # LoRA Stacking: default safe setup to prevent over-saturation & yellow tint
     lora_targets = [l.strip().lower() for l in params.get("enable_lora", "").split(",") if l.strip()]
-    default_strength = float(params.get("strength", 0.5))
+    default_strength = float(params.get("strength", 0.4))
 
-    for nid in ["1381", "1382", "1383", "1384", "1697"]:
+    # Disable heavy style clashing LoRAs by default (Node 1381, 1382, 1697)
+    for nid in ["1381", "1382", "1697"]:
         if nid in graph:
             inputs = graph[nid].get("inputs", {})
             for k, v in inputs.items():
                 if isinstance(v, dict) and "lora" in v:
                     lora_name = os.path.basename(v["lora"]).lower()
-                    matched = False
-                    for target in lora_targets:
-                        if target in lora_name:
-                            matched = True
-                            break
-                    if matched:
-                        v["on"] = True
-                        if default_strength > 0:
+                    matched = any(target in lora_name for target in lora_targets)
+                    v["on"] = matched
+                    if matched and default_strength > 0:
+                        v["strength"] = default_strength
+
+    # Keep safe enhancement LoRAs in Node 1383, 1384
+    for nid in ["1383", "1384"]:
+        if nid in graph:
+            inputs = graph[nid].get("inputs", {})
+            for k, v in inputs.items():
+                if isinstance(v, dict) and "lora" in v:
+                    lora_name = os.path.basename(v["lora"]).lower()
+                    if lora_targets:
+                        matched = any(target in lora_name for target in lora_targets)
+                        v["on"] = matched
+                        if matched and default_strength > 0:
                             v["strength"] = default_strength
-                    elif len(lora_targets) > 0:
-                        v["on"] = False
+                    else:
+                        # Default safe configuration: gentle aesthetic & texture, no crazy 1.0 weights
+                        if "detailer" in lora_name:
+                            v["on"] = True
+                            v["strength"] = 0.35
+                        elif "aesthetic" in lora_name or "colorfix" in lora_name:
+                            v["on"] = True
+                            v["strength"] = 0.30
+                        elif "scenery" in lora_name:
+                            v["on"] = True
+                            v["strength"] = 0.40
+                        elif "realskin" in lora_name or "baka" in lora_name:
+                            v["on"] = True
+                            v["strength"] = 0.40
+                        elif "半写实" in lora_name:
+                            v["on"] = True
+                            v["strength"] = 0.70
+                        else:
+                            v["on"] = False
 
     with open(target_path, "w", encoding="utf-8") as f:
         json.dump(graph, f, ensure_ascii=False, indent=2)
