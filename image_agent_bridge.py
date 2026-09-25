@@ -17,6 +17,7 @@ if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 import json
+import re
 import time
 import base64
 import random
@@ -284,30 +285,45 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
         # Anima AIO Yuri
         sys_prompt = (
             "你是一个精通 Stable Diffusion 和 Anima 工作流的顶级智能生图专家 Agent。\n"
-            "你的任务是深入解析用户的自然语言指令（以及可选的参考图），输出标准 JSON 格式的工作流参数配置。\n\n"
-            "【本地已安装 Anima 核心 LoRA 对应库】：\n"
-            "- RealSkin (权重 0.8): 真实皮肤、毛孔细腻、写实人体\n"
-            "- aesthetic (权重 0.35): 画质增强、超清、美学提升\n"
-            "- detailer (权重 0.4): 细节丰富、毛发与纹理刻画\n"
-            "- Scenery_enchancer (权重 0.7): 唯美风景、自然光照\n"
-            "- darklight (权重 0.65): 暗黑风、深邃阴影、高对比度\n\n"
-            "【严格要求】：\n"
-            "1. 如果有参考图，正向提示词 (prompt) 必须准确识别并保留原图中的角色特征（如二次元画风、角色名、黑发发型、眼眸、女仆发饰、黑丝/连裤袜、躺卧或站立姿势构图等），严禁随意篡改发色或服装材质。\n"
-            "2. 正向开头必须强制加上画风锚定词：`(anime style:1.3), (masterpiece, best quality, absurdres:1.2)`，负向提示词必须包含 `(worst quality:1.4), (3d, realistic, photo:1.3)`，严禁生成写实真人质感。\n"
-            "3. 去噪强度 (denoise) 选择黄金法则（极其关键）：\n"
-            "   - 保持姿势、原图画风、服装材质、人物五官发饰（图生图）：必须严格设置为 0.50！\n"
-            "   - 去噪度超过 0.60 会导致原图结构与五官面部走样，因此图生图一律严禁超过 0.55！\n"
-            "4. 输出必须是合法 JSON 字符串，包含以下键：\n"
+            "你的任务是深入解析用户的自然语言指令（以及可选的参考图），精确规划画风、提示词、LoRA 及参数配置。\n\n"
+            "【本地已配置的 Anima 核心 LoRA 对应库及作用】：\n"
+            "- semi_realistic / 半写实 (推荐权重 0.70-0.75): 半写实动漫风格，精美逼真立体光影，细腻CG质感。当用户提到“半写实”、“写实画风”、“厚涂写实”、“逼真质感”、“立体感”时必须启用！\n"
+            "- RealSkin / 真实皮肤 (推荐权重 0.50): 真实皮肤微质感、毛孔细腻度与真实人体光泽。可与半写实 LoRA 叠加增强质感。\n"
+            "- leg_detail / 腿部质感 (推荐权重 0.55): 黑丝、连裤袜织物细节、腿部曲线与丝袜光泽强化。当提到“黑丝/丝袜/腿部/足部”时启用！\n"
+            "- aesthetic (推荐权重 0.35): 美学提升、画面超清与色彩通透度（默认常开）。\n"
+            "- detailer (推荐权重 0.35): 发丝、瞳孔、五官与配饰高精度微细节刻画（默认常开）。\n"
+            "- scenery (推荐权重 0.50): 宏大背景、风景与室外环境光影。\n\n"
+            "【画风与提示词规划准则（极其关键）】：\n"
+            "1. 画风分支判断 (style_mode: 'semi_realistic' 或 'anime')：\n"
+            "   - 若用户指令要求【半写实】、【真实质感】、【写实画风】：\n"
+            "     * style_mode 设为 'semi_realistic'。\n"
+            "     * loras 必须包含 'semi_realistic': 0.70，并可搭配 'RealSkin': 0.50 与 'detailer': 0.35。\n"
+            "     * 正向提示词开头必须写入：`(semi-realistic:1.25), (photorealistic anime illustration:1.15), (masterpiece, best quality, absurdres:1.2), detailed realistic skin texture, realistic soft lighting, subsurface scattering, ambient occlusion`。\n"
+            "     * 负向提示词中【绝对严禁】出现 `(realistic, 3d, photo)`！只保留常规劣质过滤词：`(worst quality, low quality:1.4), (bad anatomy, bad hands:1.2), blurry, watermark, extra fingers, deformed face, duplicate`。\n"
+            "   - 若用户指令要求【纯二次元/动漫/日系插画】：\n"
+            "     * style_mode 设为 'anime'。\n"
+            "     * 正向提示词开头写入：`(anime style:1.3), (masterpiece, best quality, absurdres:1.2)`。\n"
+            "     * 负向提示词包含：`(worst quality:1.4), (3d, realistic, photo:1.3), bad anatomy, bad hands`。\n"
+            "2. 参考图保真度与去噪度 (denoise)：\n"
+            "   - 图生图下，必须仔细识别参考图的角色特征（发型发色、五官构图、服饰与黑丝材质），严禁随意更改角色核心特征。\n"
+            "   - 保持姿势与特征同时改变画风质感，denoise 建议设为 0.50 - 0.52。\n"
+            "3. 输出格式要求：\n"
+            "必须输出纯 JSON 代码块，符合以下结构：\n"
             "```json\n"
             "{\n"
-            '  "prompt": "(masterpiece, best quality, absurdres:1.2), (anime style:1.3), 1girl, solo, anime aesthetic, detailed hair and eyes, elegant outfit, looking at viewer, ...",\n'
-            '  "negative_prompt": "(worst quality, low quality:1.4), (3d, realistic, photo:1.3), bad anatomy, bad hands, blurry, watermark, ...",\n'
-            '  "steps": 28,\n'
-            '  "cfg": 4.0,\n'
+            '  "style_mode": "semi_realistic",\n'
+            '  "prompt": "(semi-realistic:1.25), (photorealistic anime illustration:1.15), (masterpiece, best quality, absurdres:1.2), 1girl, solo, detailed skin texture, ...",\n'
+            '  "negative_prompt": "(worst quality, low quality:1.4), (bad anatomy, bad hands:1.2), blurry, watermark, ...",\n'
+            '  "steps": 30,\n'
+            '  "cfg": 4.5,\n'
             '  "denoise": 0.50,\n'
             '  "seed": -1,\n'
-            '  "enable_lora": "aesthetic,detailer",\n'
-            '  "strength": 0.35\n'
+            '  "loras": {\n'
+            '    "semi_realistic": 0.70,\n'
+            '    "RealSkin": 0.50,\n'
+            '    "aesthetic": 0.35,\n'
+            '    "detailer": 0.35\n'
+            '  }\n'
             "}\n"
             "```\n"
             "只输出 JSON 代码块，绝不要输出额外开场白或解释。"
@@ -397,6 +413,17 @@ def apply_to_qwen_workflow(params, saved_image_filename=None):
     print(f"[Bridge] Qwen workflow updated: {target_path} (wh_ratio: {wh_ratio}, {w}x{h})")
     return target_path
 
+def clean_negative_prompt_for_realism(neg_prompt):
+    cleaned = neg_prompt
+    cleaned = re.sub(r'\([^)]*(?:realistic|photo|3d)[^)]*\)[, ]*', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\b(?:photorealistic|realistic|photo|3d)\b[, ]*', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r',\s*,+', ',', cleaned)
+    cleaned = re.sub(r'^\s*,\s*', '', cleaned)
+    cleaned = re.sub(r'\s*,\s*$', '', cleaned).strip()
+    if not cleaned:
+        cleaned = "(worst quality, low quality:1.4), (bad anatomy, bad hands:1.2), blurry, watermark, extra fingers, deformed face, duplicate"
+    return cleaned
+
 def apply_to_anima_workflow(params, saved_image_filename=None):
     cfg = get_config()
     target_path = cfg["anima_workflow"]
@@ -404,21 +431,50 @@ def apply_to_anima_workflow(params, saved_image_filename=None):
     with open(target_path, "r", encoding="utf-8") as f:
         graph = json.load(f)
 
-    # 1610: Positive Prompt
+    # 1. Detect style mode: semi-realistic vs pure anime
+    p_raw = str(params.get("prompt", "")).lower()
+    style_mode = str(params.get("style_mode", "")).lower()
+    loras_dict = params.get("loras", {}) if isinstance(params.get("loras"), dict) else {}
+    enable_lora_str = str(params.get("enable_lora", "")).lower()
+
+    # Robust multi-layered semi-realistic intent detection
+    is_semi = (
+        style_mode in ("semi_realistic", "semi-realistic", "realistic") or
+        any(k in ("semi_realistic", "semi-realistic", "半写实", "realskin", "真实皮肤") for k in loras_dict.keys()) or
+        any(k in enable_lora_str for k in ("semi_realistic", "semi-realistic", "半写实", "realskin", "真实皮肤")) or
+        any(k in p_raw for k in ("semi-realistic", "semi_realistic", "photorealistic", "半写实", "写实画风", "厚涂写实"))
+    )
+
+    # Stockings / leg texture detection (prevents skin-colored stockings)
+    has_stockings = any(k in p_raw for k in ("black pantyhose", "pantyhose", "stockings", "tights", "黑丝", "丝袜", "连裤袜"))
+
+    # 2. Positive Prompt (Node 1610)
     if "1610" in graph and "prompt" in params:
-        p_val = params["prompt"]
-        if "anime style" not in p_val.lower():
-            p_val = "(anime style:1.3), " + p_val
+        p_val = params["prompt"].strip()
+        if is_semi:
+            # Strip anime style anchors
+            p_val = re.sub(r'\([^)]*anime style[^)]*\)[, ]*', '', p_val, flags=re.IGNORECASE)
+            p_val = re.sub(r'\banime style\b[, ]*', '', p_val, flags=re.IGNORECASE)
+            # Ensure semi-realistic anchor is present
+            if "semi-realistic" not in p_val.lower() and "半写实" not in p_val:
+                anchor = "(semi-realistic:1.25), (photorealistic anime illustration:1.15), (masterpiece, best quality, absurdres:1.2), detailed realistic skin texture, realistic soft lighting"
+                p_val = f"{anchor}, {p_val}" if p_val else anchor
+        else:
+            if "anime style" not in p_val.lower():
+                p_val = "(anime style:1.3), " + p_val
         graph["1610"]["inputs"]["value"] = p_val
 
-    # 1611: Negative Prompt
+    # 3. Negative Prompt (Node 1611)
     if "1611" in graph and "negative_prompt" in params:
-        n_val = params["negative_prompt"]
-        if "3d" not in n_val.lower():
-            n_val = "(3d, realistic, photo:1.3), " + n_val
+        n_val = params["negative_prompt"].strip()
+        if is_semi:
+            n_val = clean_negative_prompt_for_realism(n_val)
+        else:
+            if "3d" not in n_val.lower() and "realistic" not in n_val.lower():
+                n_val = "(3d, realistic, photo:1.3), " + n_val
         graph["1611"]["inputs"]["value"] = n_val
 
-    # 118: KSampler
+    # 4. KSampler (Node 118)
     s = int(params.get("seed", -1))
     cur_seed = random.randint(1, 10**15) if s == -1 else s
 
@@ -430,37 +486,34 @@ def apply_to_anima_workflow(params, saved_image_filename=None):
             ks["cfg"] = float(params["cfg"])
         if "denoise" in params:
             d = float(params["denoise"])
-            if saved_image_filename and d > 0.55:
+            if saved_image_filename and d > 0.52:
                 print(f"[Bridge] Denoise {d} safely clamped to 0.50 to preserve stockings & character fidelity")
                 d = 0.50
             ks["denoise"] = d
         ks["seed"] = cur_seed
 
-    # 1701: FaceDetailer (sync seed & ensure reasonable denoise for face lock)
+    # 5. FaceDetailer (Node 1701)
     if "1701" in graph:
         fd = graph["1701"]["inputs"]
         fd["seed"] = cur_seed
         if "face_denoise" in params:
             fd["denoise"] = float(params["face_denoise"])
-        elif "denoise" not in fd or fd["denoise"] > 0.4:
+        elif "denoise" not in fd or fd["denoise"] > 0.35:
             fd["denoise"] = 0.30
 
-    # 1607 & 1608: LoadImage & Mode Switching (Img2Img vs Text2Img)
+    # 6. LoadImage & Mode Switching (Img2Img vs Text2Img)
     if saved_image_filename:
         if "1608" in graph:
             graph["1608"]["inputs"]["image"] = saved_image_filename
         if "1607" in graph:
             graph["1607"]["inputs"]["image"] = saved_image_filename
-        # Enable Mode 2 (Img2Img), disable Mode 4 (Empty Latent)
         if "1603:1525" in graph:
             graph["1603:1525"]["inputs"]["boolean"] = True
         if "1603:1528" in graph:
             graph["1603:1528"]["inputs"]["boolean"] = False
-        # Set golden denoise 0.50 for img2img if not specified
         if "118" in graph and "denoise" not in params:
             graph["118"]["inputs"]["denoise"] = 0.50
     else:
-        # Pure Text-to-Image mode: use fallback valid image to ensure ComfyUI graph passes pre-validation
         if "1607" in graph:
             graph["1607"]["inputs"]["image"] = "reference.png"
         if "1608" in graph:
@@ -472,55 +525,93 @@ def apply_to_anima_workflow(params, saved_image_filename=None):
         if "118" in graph and "denoise" not in params:
             graph["118"]["inputs"]["denoise"] = 1.0
 
-    # LoRA Stacking: default safe setup to prevent over-saturation & yellow tint
-    lora_targets = [l.strip().lower() for l in params.get("enable_lora", "").split(",") if l.strip()]
-    default_strength = float(params.get("strength", 0.4))
+    # 7. LoRA Stacking Management
+    req_loras = {}
+    for k, v in loras_dict.items():
+        try:
+            req_loras[str(k).lower()] = float(v)
+        except (ValueError, TypeError):
+            req_loras[str(k).lower()] = 0.5
+    for item in enable_lora_str.split(","):
+        t = item.strip().lower()
+        if t and t not in req_loras:
+            req_loras[t] = 0.5
 
-    # Disable heavy style clashing LoRAs by default (Node 1381, 1382, 1697)
-    for nid in ["1381", "1382", "1697"]:
-        if nid in graph:
-            inputs = graph[nid].get("inputs", {})
-            for k, v in inputs.items():
-                if isinstance(v, dict) and "lora" in v:
-                    lora_name = os.path.basename(v["lora"]).lower()
-                    matched = any(target in lora_name for target in lora_targets)
-                    v["on"] = matched
-                    if matched and default_strength > 0:
-                        v["strength"] = default_strength
+    # If is_semi is True, ensure semi_realistic and realskin are in req_loras
+    if is_semi:
+        if "semi_realistic" not in req_loras and "半写实" not in req_loras:
+            req_loras["semi_realistic"] = 0.72
+        if "realskin" not in req_loras and "真实皮肤" not in req_loras:
+            req_loras["realskin"] = 0.50
+    if has_stockings:
+        if "leg_detail" not in req_loras and "腿部质感" not in req_loras:
+            req_loras["leg_detail"] = 0.55
 
-    # Keep safe enhancement LoRAs in Node 1383, 1384
-    for nid in ["1383", "1384"]:
-        if nid in graph:
-            inputs = graph[nid].get("inputs", {})
-            for k, v in inputs.items():
-                if isinstance(v, dict) and "lora" in v:
-                    lora_name = os.path.basename(v["lora"]).lower()
-                    if lora_targets:
-                        matched = any(target in lora_name for target in lora_targets)
-                        v["on"] = matched
-                        if matched and default_strength > 0:
-                            v["strength"] = default_strength
-                    else:
-                        # Default safe configuration: gentle aesthetic & texture, no crazy 1.0 weights
-                        if "detailer" in lora_name:
-                            v["on"] = True
-                            v["strength"] = 0.35
-                        elif "aesthetic" in lora_name or "colorfix" in lora_name:
-                            v["on"] = True
-                            v["strength"] = 0.30
-                        elif "scenery" in lora_name:
-                            v["on"] = True
-                            v["strength"] = 0.40
-                        elif "realskin" in lora_name or "baka" in lora_name:
-                            v["on"] = True
-                            v["strength"] = 0.40
-                        elif "半写实" in lora_name:
-                            v["on"] = True
-                            v["strength"] = 0.70
-                        else:
-                            v["on"] = False
+    # Always ensure aesthetic and detailer are active
+    if "detailer" not in req_loras:
+        req_loras["detailer"] = 0.35
+    if "aesthetic" not in req_loras:
+        req_loras["aesthetic"] = 0.35
+
+    # Configure Node 1381 (Characters)
+    if "1381" in graph:
+        for k, v in graph["1381"].get("inputs", {}).items():
+            if isinstance(v, dict) and "lora" in v:
+                lname = os.path.basename(v["lora"]).lower()
+                if "半写实" in lname:
+                    v["on"] = False
+                else:
+                    v["on"] = any(t in lname for t in req_loras)
+
+    # Configure Node 1382 (2D Anime Styles): DISABLE ALL if is_semi
+    if "1382" in graph:
+        for k, v in graph["1382"].get("inputs", {}).items():
+            if isinstance(v, dict) and "lora" in v:
+                if is_semi:
+                    v["on"] = False
+                else:
+                    lname = os.path.basename(v["lora"]).lower()
+                    v["on"] = any(t in lname for t in req_loras)
+
+    # Configure Node 1383 (Realism & Textures)
+    if "1383" in graph:
+        for k, v in graph["1383"].get("inputs", {}).items():
+            if isinstance(v, dict) and "lora" in v:
+                lname = os.path.basename(v["lora"]).lower()
+                if "半写实" in lname:
+                    v["on"] = is_semi or any(t in ("semi_realistic", "半写实") for t in req_loras)
+                    v["strength"] = req_loras.get("semi_realistic", req_loras.get("半写实", 0.72))
+                elif "realskin" in lname:
+                    v["on"] = is_semi or any(t in ("realskin", "真实皮肤") for t in req_loras)
+                    v["strength"] = req_loras.get("realskin", req_loras.get("真实皮肤", 0.50))
+                elif "baka" in lname:
+                    v["on"] = not is_semi and any(t in ("baka", "动漫皮肤") for t in req_loras)
+                    v["strength"] = req_loras.get("baka", 0.45)
+                elif "腿部" in lname:
+                    v["on"] = has_stockings or any(t in ("leg_detail", "腿部质感", "腿部") for t in req_loras)
+                    v["strength"] = req_loras.get("leg_detail", req_loras.get("腿部质感", 0.55))
+                elif "scenery" in lname or "background" in lname:
+                    v["on"] = any(t in ("scenery", "background", "风景") for t in req_loras)
+                    v["strength"] = req_loras.get("scenery", 0.50)
+                else:
+                    v["on"] = False
+
+    # Configure Node 1384 (Quality & Enhancement)
+    if "1384" in graph:
+        for k, v in graph["1384"].get("inputs", {}).items():
+            if isinstance(v, dict) and "lora" in v:
+                lname = os.path.basename(v["lora"]).lower()
+                if "detailer" in lname:
+                    v["on"] = True
+                    v["strength"] = req_loras.get("detailer", 0.35)
+                elif "aesthetic" in lname:
+                    v["on"] = True
+                    v["strength"] = req_loras.get("aesthetic", 0.35)
+                elif "colorfix" in lname:
+                    v["on"] = any(t in ("colorfix", "色彩修复") for t in req_loras)
+                    v["strength"] = req_loras.get("colorfix", 0.30)
 
     with open(target_path, "w", encoding="utf-8") as f:
         json.dump(graph, f, ensure_ascii=False, indent=2)
-    print(f"[Bridge] Anima workflow updated: {target_path}")
+    print(f"[Bridge] Anima workflow updated: {target_path} (is_semi={is_semi}, has_stockings={has_stockings})")
     return target_path

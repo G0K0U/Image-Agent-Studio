@@ -831,10 +831,16 @@ class StudioHandler(BaseHTTPRequestHandler):
                         if "1603:1528" in graph:
                             graph["1603:1528"]["inputs"]["boolean"] = True
 
-                    if data.get("prompt") and "1610" in graph:
-                        graph["1610"]["inputs"]["value"] = data["prompt"]
-                    if data.get("negative_prompt") and "1611" in graph:
-                        graph["1611"]["inputs"]["value"] = data["negative_prompt"]
+                    prompt_str = data.get("prompt", "")
+                    if prompt_str and "1610" in graph:
+                        graph["1610"]["inputs"]["value"] = prompt_str
+
+                    neg_prompt_str = data.get("negative_prompt", "")
+                    if neg_prompt_str and "1611" in graph:
+                        if any(k in prompt_str.lower() for k in ("semi-realistic", "photorealistic", "半写实", "realskin")):
+                            neg_prompt_str = image_agent_bridge.clean_negative_prompt_for_realism(neg_prompt_str)
+                        graph["1611"]["inputs"]["value"] = neg_prompt_str
+
                     if "118" in graph:
                         ks = graph["118"]["inputs"]
                         if data.get("steps"): ks["steps"] = int(data["steps"])
@@ -844,7 +850,7 @@ class StudioHandler(BaseHTTPRequestHandler):
                             except ValueError: pass
                         
                         # In image-to-image mode, clamp denoise to safe golden range (0.50) if too high
-                        if (has_image or saved_filename) and ks.get("denoise", 0.50) > 0.55:
+                        if (has_image or saved_filename) and ks.get("denoise", 0.50) > 0.52:
                             print(f"[Studio] Clamping denoise from {ks.get('denoise')} to 0.50 to protect character features & stockings")
                             ks["denoise"] = 0.50
 

@@ -1,9 +1,9 @@
 {
   "118": {
     "inputs": {
-      "seed": 0,
-      "steps": 28,
-      "cfg": 4.0,
+      "seed": 842794163830708,
+      "steps": 30,
+      "cfg": 4.5,
       "sampler_name": "euler",
       "scheduler": "simple",
       "denoise": 0.5,
@@ -191,27 +191,37 @@
       "lora_1": {
         "on": false,
         "lora": "Anima\\画风\\Scenery_enchancer-Anima-P3.safetensors",
-        "strength": 0.4999999999999997
+        "strength": 0.5
       },
       "lora_2": {
         "on": false,
         "lora": "Anima\\画风\\anima-base-1-photo-background-v4.safetensors",
-        "strength": 0.4999999999999996
+        "strength": 0.5
       },
       "lora_3": {
         "on": false,
         "lora": "画风\\bakaE79AAEE882A4.Md2S.safetensors",
-        "strength": 0.4499999999999996
+        "strength": 0.45
       },
       "lora_4": {
         "on": false,
         "lora": "画风\\bakav3-000012.safetensors",
-        "strength": 0.6999999999999997
+        "strength": 0.45
       },
       "lora_5": {
+        "on": true,
+        "lora": "Anima\\Anima-半写实动漫.safetensors",
+        "strength": 0.72
+      },
+      "lora_6": {
+        "on": true,
+        "lora": "Anima\\RealSkin SliderV2.safetensors",
+        "strength": 0.5
+      },
+      "lora_7": {
         "on": false,
-        "lora": "Anima-半写实动漫.safetensors",
-        "strength": 1
+        "lora": "Anima\\Anima-腿部质感-000005.safetensors",
+        "strength": 0.55
       },
       "➕ Add Lora": "",
       "model": [
@@ -246,7 +256,7 @@
       "lora_3": {
         "on": false,
         "lora": "画风\\Anima_colorfix_v1_by_Volnovik.safetensors",
-        "strength": 0.29999999999999993
+        "strength": 0.3
       },
       "➕ Add Lora": "",
       "model": [
@@ -319,7 +329,7 @@
   },
   "1610": {
     "inputs": {
-      "value": "(masterpiece, best quality, absurdres:1.2), (anime style:1.3), 1girl, solo, anime aesthetic, detailed hair and eyes, intricate clothing details, looking at viewer, dynamic pose, high quality anime illustration"
+      "value": "(semi-realistic:1.25), (photorealistic anime illustration:1.15), (masterpiece, best quality, absurdres:1.2), detailed realistic skin texture, realistic soft lighting, subsurface scattering, ambient occlusion, 1girl, solo, delicate skin pores, natural skin sheen, volumetric lighting, depth of field, intricate details"
     },
     "class_type": "String",
     "_meta": {
@@ -328,7 +338,7 @@
   },
   "1611": {
     "inputs": {
-      "value": "(worst quality, low quality:1.4), (bad anatomy, bad hands:1.2), (blurry, watermark:1.2), (3d, realistic, photo:1.3)"
+      "value": "(worst quality, low quality:1.4), (bad anatomy, bad hands:1.2), blurry, watermark, extra fingers, deformed face, duplicate"
     },
     "class_type": "String",
     "_meta": {
@@ -672,7 +682,7 @@
   },
   "1603:1525": {
     "inputs": {
-      "boolean": true
+      "boolean": false
     },
     "class_type": "BooleanBasic",
     "_meta": {
@@ -690,7 +700,7 @@
   },
   "1603:1528": {
     "inputs": {
-      "boolean": false
+      "boolean": true
     },
     "class_type": "BooleanBasic",
     "_meta": {
@@ -1153,7 +1163,7 @@
       "guide_size": 512.0,
       "guide_size_for": true,
       "max_size": 1024.0,
-      "seed": 0,
+      "seed": 842794163830708,
       "steps": 20,
       "cfg": 4.5,
       "sampler_name": "euler",
