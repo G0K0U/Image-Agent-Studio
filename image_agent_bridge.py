@@ -93,6 +93,10 @@ WH_RATIO_MAP = {
     "9:21": (640, 1536),
     "1:2": (704, 1408),
     "2:1": (1408, 704),
+    "3:1": (1536, 512),
+    "1:3": (512, 1536),
+    "5:7": (864, 1208),
+    "7:5": (1208, 864),
 }
 
 def free_comfyui():
@@ -251,34 +255,50 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
         })
 
     if workflow == "qwen":
-        prompts_dir = os.path.join(SCRIPT_DIR, "prompts")
+        skill_dir = os.path.join(SCRIPT_DIR, "skills", "qwen-image-2-1-prompter")
+        ref_dir = os.path.join(skill_dir, "references")
+        
+        cheat_sheet = ""
+        cs_file = os.path.join(ref_dir, "cheat_sheet.md")
+        if os.path.exists(cs_file):
+            with open(cs_file, "r", encoding="utf-8") as f:
+                cheat_sheet = f.read()
+
         if image_path:
-            p_file = os.path.join(prompts_dir, "system_prompt_edit.txt")
-            if os.path.exists(p_file):
-                with open(p_file, "r", encoding="utf-8") as f:
-                    sys_prompt = f.read()
-            else:
-                sys_prompt = "You are an expert Qwen-Image 2.1 image editing assistant. Generate attribute disentanglement instructions in JSON format."
+            # Mode 2: Image Edit & Multi-Image Compositing (Attribute Disentanglement)
+            p_file = os.path.join(ref_dir, "edit_rules.md")
+            if not os.path.exists(p_file):
+                p_file = os.path.join(SCRIPT_DIR, "prompts", "system_prompt_edit.txt")
+            with open(p_file, "r", encoding="utf-8") as f:
+                sys_prompt = f.read()
+            if cheat_sheet:
+                sys_prompt += f"\n\n---\n## Parameter & Vocabulary Reference\n{cheat_sheet}"
         else:
-            p_file = os.path.join(prompts_dir, "system_prompt_t2i.txt")
-            if os.path.exists(p_file):
-                with open(p_file, "r", encoding="utf-8") as f:
-                    sys_prompt = f.read()
-            else:
-                sys_prompt = "You are an expert Qwen-Image 2.1 prompt rewriting assistant. Expand user instructions into high-quality descriptive prompts in JSON format."
+            # Mode 1: Text-to-Image (T2I) (8-step observer prose)
+            p_file = os.path.join(ref_dir, "t2i_rules.md")
+            if not os.path.exists(p_file):
+                p_file = os.path.join(SCRIPT_DIR, "prompts", "system_prompt_t2i.txt")
+            with open(p_file, "r", encoding="utf-8") as f:
+                sys_prompt = f.read()
+            if cheat_sheet:
+                sys_prompt += f"\n\n---\n## Parameter & Vocabulary Reference\n{cheat_sheet}"
 
         sys_prompt += (
-            "\n\n【OUTPUT FORMAT REQUIREMENT】:\n"
+            "\n\n【OUTPUT FORMAT REQUIREMENT (API / Pipeline Mode)】:\n"
             "You MUST output ONLY a valid JSON markdown codeblock conforming to this schema:\n"
             "```json\n"
             "{\n"
             '  "rewritten_prompt": "Descriptive expanded prompt paragraph here...",\n'
             '  "wh_ratio": "2:3",\n'
+            '  "ratio_follow": "",\n'
             '  "steps": 40,\n'
             '  "cfg": 1.0,\n'
             '  "seed": -1\n'
             "}\n"
             "```\n"
+            "Notes on fields:\n"
+            "- 'rewritten_prompt': exactly one continuous descriptive paragraph, no newline characters, balanced straight quotes.\n"
+            "- 'wh_ratio': e.g. '16:9', '2:3', '1:1', '3:2'. For edit mode, if following input image ratio, set 'wh_ratio': '' and 'ratio_follow': '<image1>'.\n"
             "Output strictly the JSON codeblock without conversational filler."
         )
     else:
@@ -382,7 +402,24 @@ def apply_to_qwen_workflow(params, saved_image_filename=None):
         graph = json.load(f)
         
     rewritten_prompt = params.get("rewritten_prompt") or params.get("prompt", "")
-    wh_ratio = params.get("wh_ratio", "2:3" if is_i2i else "16:9")
+    wh_ratio = params.get("wh_ratio", "")
+    ratio_follow = params.get("ratio_follow", "")
+
+    if is_i2i and saved_image_filename and (not wh_ratio or ratio_follow):
+        try:
+            from PIL import Image
+            img_full = os.path.join(cfg["comfy_input_dir"], saved_image_filename)
+            if os.path.exists(img_full):
+                with Image.open(img_full) as im:
+                    iw, ih = im.size
+                    target_ratio = iw / ih
+                    best_r = min(WH_RATIO_MAP.keys(), key=lambda r: abs((WH_RATIO_MAP[r][0] / WH_RATIO_MAP[r][1]) - target_ratio))
+                    wh_ratio = best_r
+        except Exception:
+            wh_ratio = "2:3"
+    elif not wh_ratio:
+        wh_ratio = "2:3" if is_i2i else "16:9"
+
     w, h = WH_RATIO_MAP.get(wh_ratio, (832, 1216) if is_i2i else (1344, 768))
     
     # 4: TextEncodeQwenImage21
