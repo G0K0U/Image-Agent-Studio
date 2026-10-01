@@ -102,37 +102,53 @@ def main():
     print("-" * 70)
     print("正在等待服务完全就绪...")
     studio_ready = wait_for_port(7860, "Image Agent Studio", timeout=30)
-    comfy_ready = wait_for_port(8191, "ComfyUI 引擎", timeout=45)
+    comfy_ready = wait_for_port(8191, "ComfyUI 引擎", timeout=90)
 
     # 4. Open independent browser windows
     print("-" * 70)
-    print("正在浏览器中分别打开 Studio 和 ComfyUI 两个独立窗口...")
+    urls = []
+    if studio_ready:
+        urls.append(("http://127.0.0.1:7860", "Image Agent Studio"))
+    else:
+        print("  [!] Image Agent Studio (端口 7860) 启动超时或失败，未打开对应网页！")
 
-    edge_path = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-    chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
-    browser_exe = edge_path if os.path.exists(edge_path) else (chrome_path if os.path.exists(chrome_path) else None)
+    if comfy_ready:
+        urls.append(("http://127.0.0.1:8191", "ComfyUI 控制台"))
+    else:
+        print("  [!] ComfyUI 引擎 (端口 8191) 启动超时或失败，未打开对应网页！")
 
-    urls = ["http://127.0.0.1:7860", "http://127.0.0.1:8191"]
+    if urls:
+        print("正在浏览器中分别打开独立窗口...")
+        edge_path = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+        chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+        browser_exe = edge_path if os.path.exists(edge_path) else (chrome_path if os.path.exists(chrome_path) else None)
 
-    if browser_exe:
-        for url in urls:
-            try:
-                subprocess.Popen([browser_exe, "--new-window", url])
-            except Exception as e:
-                print(f"  [!] 打开浏览器窗口失败 ({url}): {e}")
+        for url, name in urls:
+            opened = False
+            if browser_exe:
+                try:
+                    subprocess.Popen([browser_exe, "--new-window", url])
+                    opened = True
+                except Exception as e:
+                    print(f"  [!] 打开浏览器窗口失败 ({url}): {e}")
+            if not opened:
                 webbrowser.open_new(url)
             time.sleep(0.5)
-    else:
-        for url in urls:
-            webbrowser.open_new(url)
-            time.sleep(0.5)
 
-    print("=" * 70)
-    print("  🎉 已成功在浏览器打开两个独立窗口：")
-    print("     - Image Agent Studio: http://127.0.0.1:7860")
-    print("     - ComfyUI 控制台:    http://127.0.0.1:8191")
-    print("=" * 70)
-    time.sleep(3)
+        print("=" * 70)
+        print("  🎉 已成功就绪并打开网页：")
+        for url, name in urls:
+            print(f"     - {name}: {url}")
+        print("=" * 70)
+        time.sleep(3)
+    else:
+        print("=" * 70)
+        print("  [X] 服务启动失败，请检查控制台错误信息。按任意键退出...")
+        print("=" * 70)
+        try:
+            input()
+        except Exception:
+            time.sleep(10)
 
 if __name__ == "__main__":
     main()
