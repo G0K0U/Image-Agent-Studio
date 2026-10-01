@@ -326,7 +326,13 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             "3. 严禁假设性/条件性句式 (STRICT BAN ON CONDITIONAL WORDS):\n"
             "   - 绝对严禁使用 'If exposed', 'if visible', 'whether or not', 'optional', 'may be'！必须使用绝对肯定句直接命令绘制高清晰细节。\n"
             "4. 负向提示词强力拦截抹平与残缺 (ANTI-SMOOTHING NEGATIVE PROMPT):\n"
-            "   - 当涉及私处解剖时，负向提示词必须包含：'smooth crotch, featureless crotch, barbie doll crotch, flat crotch, missing genitalia, erased genitalia, blurry crotch, twisted anatomy, sideways genitals, inverted anatomy, upside down genitals, deformed crotch, fused buttocks, extra limbs, underwear covering, bar censor, mosaic censor, lowres'.\n\n"
+            "   - 当涉及私处解剖时，负向提示词必须包含：'smooth crotch, featureless crotch, barbie doll crotch, flat crotch, missing genitalia, erased genitalia, blurry crotch, twisted anatomy, sideways genitals, inverted anatomy, upside down genitals, deformed crotch, fused buttocks, extra limbs, underwear covering, bar censor, mosaic censor, lowres'.\n"
+            "5. 【身份锚点枚举——极其关键 (IDENTITY ANCHOR ENUMERATION)】:\n"
+            "   - 生成前必须先从底图提取完整身份特征清单并逐项写入正面提示词：光环/翅膀/饰品/纹身/指甲颜色/手持物/发型发色/瞳色/特殊服装部件等非常规元素。denoise≥0.5 时未在提示词中明确命名的底图特征会被默认丢弃。同时严格写入光照匹配（逆光/高调/对比度/轮廓光，与底图完全一致）。\n"
+            "6. 【DENOISE 任务分档决策 (TASK-BASED DENOISE SELECTION)】:\n"
+            "   - 表情/微调: 0.35-0.45；换装/材质/风格转换: 0.50-0.55；\n"
+            "   - 深色/高对比衣物溶解(脱衣/褪袜): 0.60-0.75 (避免深色轮廓残留被当作锚点锁定)；\n"
+            "   - 新增画面中不存在的内容(露出/解剖/道具): 0.60-0.70。\n\n"
             "【OUTPUT FORMAT REQUIREMENT (API / Pipeline Mode)】:\n"
             "You MUST output ONLY a valid JSON markdown codeblock conforming to this schema:\n"
             "```json\n"
@@ -336,6 +342,7 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             '  "ratio_follow": "",\n'
             '  "steps": 40,\n'
             '  "cfg": 1.0,\n'
+            '  "denoise": 0.55,\n'
             '  "seed": -1,\n'
             '  "loras": [],\n'
             '  "negative_prompt": ""\n'
@@ -725,6 +732,11 @@ def apply_to_qwen_workflow(params, saved_image_filename=None):
                 print(f"[Bridge] Auto-tuning Qwen KSampler CFG from {cfg_val} to 2.8 (sweet-spot) for anatomical LoRA")
                 cfg_val = 2.8
         ks["cfg"] = cfg_val
+        if is_i2i and "denoise" in params:
+            try:
+                ks["denoise"] = float(params["denoise"])
+            except (ValueError, TypeError):
+                pass
         s = int(params.get("seed", -1))
         ks["seed"] = random.randint(1, 10**15) if s == -1 else s
         if cfg_val > 1.5 or has_anatomical:
