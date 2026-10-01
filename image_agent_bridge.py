@@ -740,10 +740,11 @@ def apply_to_qwen_workflow(params, saved_image_filename=None):
     if is_i2i and "9" in graph and saved_image_filename:
         graph["9"]["inputs"]["image"] = saved_image_filename
 
-    with open(target_path, "w", encoding="utf-8") as f:
+    output_path = os.path.join(SCRIPT_DIR, "workflows", "active_qwen_run.json")
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(graph, f, ensure_ascii=False, indent=2)
-    print(f"[Bridge] Qwen workflow updated: {target_path} (wh_ratio: {wh_ratio}, {w}x{h}, cfg: {graph.get('6', {}).get('inputs', {}).get('cfg')})")
-    return target_path
+    print(f"[Bridge] Qwen workflow updated: {output_path} (wh_ratio: {wh_ratio}, {w}x{h}, cfg: {graph.get('6', {}).get('inputs', {}).get('cfg')})")
+    return output_path
 
 def clean_negative_prompt_for_realism(neg_prompt):
     cleaned = neg_prompt
@@ -892,7 +893,8 @@ def apply_to_anima_workflow(params, saved_image_filename=None):
             if isinstance(v, dict) and "lora" in v:
                 v["on"] = False
 
-    with open(target_path, "w", encoding="utf-8") as f:
+    output_path = os.path.join(SCRIPT_DIR, "workflows", "active_anima_run.json")
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(graph, f, ensure_ascii=False, indent=2)
-    print(f"[Bridge] Anima workflow updated: {target_path} (is_semi={is_semi}, has_stockings={has_stockings})")
-    return target_path
+    print(f"[Bridge] Anima workflow updated: {output_path} (is_semi={is_semi}, has_stockings={has_stockings})")
+    return output_path
