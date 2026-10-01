@@ -67,19 +67,36 @@ python scripts/download_models.py --models-dir /path/to/ComfyUI/models
 ```
 The script will output exact `huggingface-cli` download commands for any missing files.
 
-#### Core Model Reference:
-- **Qwen-Image 2.1 Engine**:
-  - Diffusion UNet: `qwen-image-2.1-Q4_K_M.gguf` (`city96/Qwen-Image-2.1-GGUF`)
-  - Text Encoder: `qwen3vl_8b_int8_convrot.safetensors` (`Comfy-Org/Qwen-Image-2.1-GGUF`)
-  - VAE: `qwen_image_2.1_vae_bf16.safetensors` (`Comfy-Org/Qwen-Image-2.1-GGUF`)
-  - Recommended LoRA: `Qwen_TheseAlpacas_V2.safetensors` (Anatomy & structure enhancer, 0.8 weight, er_sde + beta)
-- **Anima Yuri Engine**:
-  - Checkpoint: `miaomiaoHarem_animaBase.safetensors` or `Anima-2.9B-preview-v1.safetensors`
-  - Text Encoder: `qwen_3_06b_base.safetensors`
-  - VAE: `qwen_image_vae.safetensors`
-  - Core LoRAs: `RealSkin`, `aesthetic`, `detailer`, `Scenery_enchancer`, `darklight`, `colorfix`
-- **Agent LLM Planner**:
-  - `Qwen3.8-27B-Heretic-Ara-iq4_xs-3.0-mtp.gguf` (or any OpenAI-compatible server such as llama.cpp, Ollama, LM Studio)
+#### 📦 Model & LoRA Reference:
+
+##### 1. Qwen-Image 2.1 Engine (进阶写实/图生图)
+| Component | Filename / Target Path | Recommended Settings | Function & Source |
+|---|---|---|---|
+| **Diffusion UNet** | `diffusion_models/qwen-image-2.1-Q4_K_M.gguf` | Q4_K_M (~4.3 GB) | [city96/Qwen-Image-2.1-GGUF](https://huggingface.co/city96/Qwen-Image-2.1-GGUF) |
+| **Text Encoder** | `text_encoders/qwen3vl_8b_int8_convrot.safetensors` | INT8 (~8.9 GB) | [Comfy-Org/Qwen-Image-2.1-GGUF](https://huggingface.co/Comfy-Org/Qwen-Image-2.1-GGUF) |
+| **VAE** | `vae/qwen_image_2.1_vae_bf16.safetensors` | BF16 (~644 MB) | [Comfy-Org/Qwen-Image-2.1-GGUF](https://huggingface.co/Comfy-Org/Qwen-Image-2.1-GGUF) |
+| **Anatomy LoRA** | `loras/Qwen_TheseAlpacas_V2.safetensors` | **Strength: 0.8** (`er_sde` + `beta`) | Anatomy, hands & structural detail enhancer (~79.7 MB) |
+| **Anime LoRA** | `loras/Qwen2.1_Anime_consistency.safetensors` | **Strength: 0.6 ~ 0.8** | Anime style consistency enhancer (Optional) |
+
+##### 2. Anima AIO Yuri Engine (SDXL 动漫专精)
+| Component | Filename / Target Path | Recommended Settings | Function & Role |
+|---|---|---|---|
+| **Base Model** | `diffusion_models/Anima/miaomiaoHarem_animaBase.safetensors` | SDXL Checkpoint (~5.5 GB) | Cirno-9 / Civitai Anima Base |
+| **Text Encoder** | `text_encoders/qwen_3_06b_base.safetensors` | Text Encoder (~1.1 GB) | [Comfy-Org/Anima](https://huggingface.co/Comfy-Org/Anima) |
+| **VAE** | `vae/qwen_image_vae.safetensors` | VAE (~242 MB) | [Comfy-Org/Anima](https://huggingface.co/Comfy-Org/Anima) |
+
+###### 🌸 Anima Core Recommended LoRA Stack (`models/loras/`):
+| LoRA Filename | Default Weight | Role & Function |
+|---|---|---|
+| `Scenery_enchancer-Anima-P3.safetensors` | `0.50` | Scenery & environmental lighting enhancer |
+| `bakaE79AAEE882A4.Md2S.safetensors` | `0.45` | RealSkin / skin texture & micro-details |
+| `Anima-写实光.safetensors` | `0.65 ~ 1.0` | Darklight & photorealistic cinematic lighting |
+| `anima_context_detailer_base10.safetensors` | `0.50` | Composition, hands & anatomy detailer |
+| `anima-highres-aesthetic-boost.safetensors` | `0.50` | Line art sharpness & aesthetic boost |
+| `Anima_colorfix_v1_by_Volnovik.safetensors` | `0.30` | Color correction & dynamic tone balance |
+
+##### 3. Agent LLM Planner
+- **Weights**: `Qwen3.8-27B-Heretic-Ara-iq4_xs-3.0-mtp.gguf` (~15.2 GB) or any OpenAI-compatible server (llama.cpp, Ollama, LM Studio).
 
 ### 4. Configure `config.json`
 Copy `config.example.json` to `config.json` and adjust endpoints and paths:
@@ -158,10 +175,42 @@ pip install -r requirements.txt
 python scripts/setup_environment.py --comfy-dir /path/to/ComfyUI
 ```
 
-### 3. 校验并下载模型
+### 3. 校验并下载模型与 LoRA 权重
 ```bash
 python scripts/download_models.py --models-dir /path/to/ComfyUI/models
 ```
+该脚本会自动检查缺失的模型并打印下载指引。
+
+#### 📦 核心模型与 LoRA 清单参考：
+
+##### 1. Qwen-Image 2.1 引擎（进阶写实/图生图）
+| 组件类型 | 文件名与存放路径 | 推荐参数 | 功能与来源 |
+|---|---|---|---|
+| **Diffusion UNet** | `diffusion_models/qwen-image-2.1-Q4_K_M.gguf` | Q4_K_M (~4.3 GB) | [city96/Qwen-Image-2.1-GGUF](https://huggingface.co/city96/Qwen-Image-2.1-GGUF) |
+| **Text Encoder** | `text_encoders/qwen3vl_8b_int8_convrot.safetensors` | INT8 (~8.9 GB) | [Comfy-Org/Qwen-Image-2.1-GGUF](https://huggingface.co/Comfy-Org/Qwen-Image-2.1-GGUF) |
+| **VAE** | `vae/qwen_image_2.1_vae_bf16.safetensors` | BF16 (~644 MB) | [Comfy-Org/Qwen-Image-2.1-GGUF](https://huggingface.co/Comfy-Org/Qwen-Image-2.1-GGUF) |
+| **结构增强 LoRA** | `loras/Qwen_TheseAlpacas_V2.safetensors` | **权重 0.8** (`er_sde` + `beta`) | 人体结构、手部与质感细节增强 (~79.7 MB) |
+| **二次元 LoRA** | `loras/Qwen2.1_Anime_consistency.safetensors` | **权重 0.6 ~ 0.8** | 二次元画风与线条一致性增强（可选） |
+
+##### 2. Anima AIO Yuri 引擎（SDXL 动漫专精）
+| 组件类型 | 文件名与存放路径 | 推荐参数 | 功能说明 |
+|---|---|---|---|
+| **底模 Checkpoint** | `diffusion_models/Anima/miaomiaoHarem_animaBase.safetensors` | SDXL 底模 (~5.5 GB) | Cirno-9 / Civitai Anima Base |
+| **Text Encoder** | `text_encoders/qwen_3_06b_base.safetensors` | 文本编码器 (~1.1 GB) | [Comfy-Org/Anima](https://huggingface.co/Comfy-Org/Anima) |
+| **VAE** | `vae/qwen_image_vae.safetensors` | VAE 编解码器 (~242 MB) | [Comfy-Org/Anima](https://huggingface.co/Comfy-Org/Anima) |
+
+###### 🌸 Anima 核心推荐 LoRA 堆叠表 (`models/loras/`):
+| LoRA 文件名 | 默认权重 | 功能作用 |
+|---|---|---|
+| `Scenery_enchancer-Anima-P3.safetensors` | `0.50` | 场景景深与环境光效增强 |
+| `bakaE79AAEE882A4.Md2S.safetensors` | `0.45` | RealSkin 皮肤纹理与真实肌理 |
+| `Anima-写实光.safetensors` | `0.65 ~ 1.0` | 暗光写实氛围与电影级光影对比 |
+| `anima_context_detailer_base10.safetensors` | `0.50` | 构图修正与解剖手部细节微调 |
+| `anima-highres-aesthetic-boost.safetensors` | `0.50` | 高清美学与整体画质飞跃 |
+| `Anima_colorfix_v1_by_Volnovik.safetensors` | `0.30` | 画面防灰与色彩校正 |
+
+##### 3. 本地 Agent 视觉规划大模型
+- **模型权重**：`Qwen3.8-27B-Heretic-Ara-iq4_xs-3.0-mtp.gguf` (~15.2 GB) 或任意兼容 OpenAI 接口的服务端（llama.cpp, Ollama, LM Studio）。
 
 ### 4. 复制并调整配置文件
 复制 `config.example.json` 为 `config.json` 并根据本地环境调整配置。
