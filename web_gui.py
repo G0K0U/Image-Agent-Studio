@@ -31,7 +31,7 @@ import image_agent_bridge
 
 CONFIG = image_agent_bridge.get_config()
 
-HTML_CONTENT = """<!DOCTYPE html>
+HTML_CONTENT = r"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -80,10 +80,11 @@ HTML_CONTENT = """<!DOCTYPE html>
     .workflow-pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 6px; }
     .pill-qwen { background: #0284c722; color: #38bdf8; border: 1px solid #0284c744; }
     .pill-anima { background: #ec489922; color: #f472b6; border: 1px solid #ec489944; }
-    .dropzone { border: 2px dashed var(--border); border-radius: 8px; padding: 12px; text-align: center; background: #0b0d13; cursor: pointer; transition: all 0.2s ease; margin-top: 4px; }
+    .dropzone { border: 2px dashed var(--border); border-radius: 8px; padding: 12px; text-align: center; background: #0b0d13; transition: all 0.2s ease; margin-top: 4px; outline: none; }
     .dropzone:hover { border-color: var(--primary); background: #10131d; }
+    .dropzone:focus { border-color: var(--primary); background: #10131d; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35); }
     .dropzone.drag-active { border-color: #38bdf8 !important; background: #0284c718 !important; box-shadow: 0 0 16px rgba(56, 189, 248, 0.35); }
-    .dropzone-content { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; pointer-events: none; }
+    .dropzone-content { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; }
     .dropzone-loaded { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   </style>
 </head>
@@ -113,22 +114,23 @@ HTML_CONTENT = """<!DOCTYPE html>
         
         <div style="margin-bottom: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-            <label style="font-size: 11px; color: var(--muted);">Reference Image / 参考底图 (支持复制粘贴与拖入):</label>
+            <label style="font-size: 11px; color: var(--muted);">Reference Image / 参考底图 (直接按 Ctrl+V 粘贴或拖入):</label>
             <span id="refBadge" style="font-size: 10px; color: #10b981; display: none;">● 图生图模式已激活</span>
           </div>
           
-          <div id="dropZone" class="dropzone" onclick="document.getElementById('refImage').click()">
+          <div id="dropZone" class="dropzone" tabindex="0">
             <input type="file" id="refImage" accept="image/*" style="display: none;">
             
             <div id="dropPrompt" class="dropzone-content">
-              <svg style="width: 24px; height: 24px; opacity: 0.7; margin-bottom: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg style="width: 26px; height: 26px; opacity: 0.7; margin-bottom: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
               </svg>
-              <span>📂 点击选择、<strong>直接拖入图片</strong> 或 <strong>Ctrl+V 粘贴</strong></span>
-              <div style="display: flex; gap: 8px; margin-top: 4px; pointer-events: auto;">
-                <button type="button" onclick="pasteFromClipboard(event)" style="width: auto; padding: 4px 12px; font-size: 11px; background: #3b82f622; color: #60a5fa; border: 1px solid #3b82f644; border-radius: 4px; cursor: pointer;">📋 粘贴剪贴板图片 (Ctrl+V)</button>
+              <span><strong>直接按 Ctrl+V 粘贴图片</strong> 或 <strong>直接拖入文件</strong></span>
+              <div style="display: flex; gap: 8px; margin-top: 6px;">
+                <button type="button" onclick="pasteFromClipboard(event)" style="width: auto; padding: 5px 14px; font-size: 11px; font-weight: 600; background: #3b82f622; color: #60a5fa; border: 1px solid #3b82f644; border-radius: 4px; cursor: pointer;">📋 粘贴剪贴板图片 (Ctrl+V)</button>
+                <button type="button" onclick="document.getElementById('refImage').click(); event.stopPropagation();" style="width: auto; padding: 5px 12px; font-size: 11px; background: #1e293b; color: #cbd5e1; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">📂 选择本地文件</button>
               </div>
-              <span style="font-size: 11px; color: #64748b;">支持 Windows 截图 (Win+Shift+S)、网页复制图片、文件复制</span>
+              <span style="font-size: 11px; color: #64748b; margin-top: 2px;">支持截图 (Win+Shift+S)、右键复制图片、网页图片或文件</span>
             </div>
 
             <div id="dropLoaded" class="dropzone-loaded" style="display: none;" onclick="event.stopPropagation();">
@@ -140,7 +142,7 @@ HTML_CONTENT = """<!DOCTYPE html>
                 </div>
               </div>
               <div style="display: flex; gap: 6px; flex-shrink: 0;">
-                <button type="button" onclick="pasteFromClipboard(event)" style="width: auto; padding: 5px 10px; font-size: 11px; background: #3b82f622; color: #60a5fa; border: 1px solid #3b82f644;" title="从系统剪贴板粘贴新图片替换当前底图">📋 粘贴</button>
+                <button type="button" onclick="pasteFromClipboard(event)" style="width: auto; padding: 5px 10px; font-size: 11px; background: #3b82f622; color: #60a5fa; border: 1px solid #3b82f644;" title="从系统剪贴板粘贴新图片替换当前底图">📋 粘贴替换</button>
                 <button type="button" onclick="document.getElementById('refImage').click()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #334155;">更换</button>
                 <button type="button" id="btnClearImg" onclick="clearImage()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #ef444422; color: #f87171; border: 1px solid #ef444444;">移除</button>
               </div>
@@ -231,6 +233,7 @@ HTML_CONTENT = """<!DOCTYPE html>
           <span>🖼️ Generation Preview / 成图预览</span>
           <div style="display: flex; align-items: center; gap: 8px;">
             <span id="genInfo" style="font-size: 12px; color: var(--muted);">Waiting / 等待渲染</span>
+            <button id="btnSetAsRef" type="button" style="width: auto; padding: 4px 10px; font-size: 11px; background: #3b82f622; color: #60a5fa; border: 1px solid #3b82f644; border-radius: 4px; display: none; cursor: pointer;" onclick="setPreviewAsReference()" title="将本张生成图直接设为参考底图（开启图生图/继续迭代）">📋 设为底图(图生图)</button>
             <button id="btnOpenNewTab" type="button" style="width: auto; padding: 4px 10px; font-size: 11px; background: #1e293b; border: 1px solid var(--border); border-radius: 4px; display: none; cursor: pointer;" onclick="openPreviewInNewTab()">🔍 新窗口查看</button>
           </div>
         </div>
@@ -263,7 +266,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       document.getElementById('dropLoaded').style.display = 'flex';
       document.getElementById('refThumb').src = currentImageBase64;
       document.getElementById('refBadge').style.display = 'inline';
-      document.getElementById('refImgName').innerText = sourceName || '剪贴板图片已载入';
+      document.getElementById('refImgName').innerText = sourceName || '参考图已载入';
       
       const tmpImg = new Image();
       tmpImg.onload = function() {
@@ -271,19 +274,14 @@ HTML_CONTENT = """<!DOCTYPE html>
       };
       tmpImg.src = currentImageBase64;
 
-      appendLog('✅ 已成功加载参考底图：' + (sourceName || '剪贴板图片') + '，自动进入【图生图/图像编辑】模式');
-      fetchStatus();
+      appendLog('✅ 已成功载入参考底图：' + (sourceName || '剪贴板图片') + '，已自动激活【图生图/图像编辑】模式');
     }
 
     function handleImageFile(file, sourceName) {
       if (!file) return;
-      if (!isImageFile(file)) {
-        appendLog('⚠️ 忽略非图片文件: ' + (file.name || file.type || '未知类型'));
-        return;
-      }
       const reader = new FileReader();
       reader.onload = function(evt) {
-        loadBase64Image(evt.target.result, sourceName || file.name || '参考图已载入');
+        loadBase64Image(evt.target.result, sourceName || file.name || '参考底图');
       };
       reader.onerror = function(err) {
         appendLog('❌ 读取图片文件失败: ' + err);
@@ -291,38 +289,106 @@ HTML_CONTENT = """<!DOCTYPE html>
       reader.readAsDataURL(file);
     }
 
+    async function loadImageFromUrl(url, sourceName) {
+      try {
+        appendLog('正在解析并获取图片数据: ' + (url.length > 50 ? url.substring(0, 50) + '...' : url));
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const blob = await res.blob();
+        handleImageFile(blob, sourceName || '链接图片');
+      } catch (err) {
+        try {
+          const res = await fetch('/api/proxy_image?url=' + encodeURIComponent(url));
+          if (!res.ok) throw new Error('Proxy HTTP ' + res.status);
+          const blob = await res.blob();
+          handleImageFile(blob, sourceName || '网络图片');
+        } catch (err2) {
+          appendLog('❌ 读取图片 URL 失败: ' + err2.message);
+        }
+      }
+    }
+
+    async function loadLocalImagePath(filePath) {
+      try {
+        appendLog('正在从本地磁盘路径读取图片: ' + filePath);
+        const res = await fetch('/api/load_local_image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: filePath })
+        });
+        const ret = await res.json();
+        if (ret.status === 'success' && ret.data) {
+          loadBase64Image(ret.data, ret.name || filePath.split('\\').pop());
+        } else {
+          appendLog('❌ 读取本地图片失败: ' + (ret.error || '找不到文件'));
+        }
+      } catch (err) {
+        appendLog('❌ 请求读取本地图片异常: ' + err);
+      }
+    }
+
+    function setPreviewAsReference() {
+      const img = document.getElementById('resultImage');
+      if (img && img.src) {
+        loadImageFromUrl(img.src, '已生成的渲染成图');
+        appendLog('🔄 已将当前成图设为参考底图，可直接在指令区输入修改要求进行图生图/局部迭代！');
+      } else {
+        alert('当前尚未生成任何成图！');
+      }
+    }
+
     async function pasteFromClipboard(evt) {
       if (evt) {
         evt.stopPropagation();
         evt.preventDefault();
       }
-      try {
-        if (!navigator.clipboard || !navigator.clipboard.read) {
-          appendLog('💡 提示：请直接在页面任意处按键盘 Ctrl+V 快捷键粘贴图片');
-          return;
+      appendLog('🔍 正在尝试从系统剪贴板读取数据...');
+      
+      // 1. Try modern clipboard.read()
+      if (navigator.clipboard && navigator.clipboard.read) {
+        try {
+          const items = await navigator.clipboard.read();
+          for (const item of items) {
+            for (const type of item.types) {
+              if (type.startsWith('image/')) {
+                const blob = await item.getType(type);
+                handleImageFile(blob, '剪贴板图片 (' + new Date().toLocaleTimeString() + ')');
+                return;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[Clipboard] navigator.clipboard.read failed:', err);
         }
-        const clipboardItems = await navigator.clipboard.read();
-        for (const item of clipboardItems) {
-          for (const type of item.types) {
-            if (type.startsWith('image/')) {
-              const blob = await item.getType(type);
-              handleImageFile(blob, '剪贴板图片 (' + new Date().toLocaleTimeString() + ')');
+      }
+
+      // 2. Try clipboard.readText()
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        try {
+          const text = (await navigator.clipboard.readText() || '').trim();
+          if (text) {
+            if (text.startsWith('data:image/')) {
+              loadBase64Image(text, '剪贴板 DataURI 图片');
+              return;
+            }
+            if (/^https?:\/\/.*\.(jpe?g|png|webp|bmp|gif|jfif)(\?.*)?$/i.test(text) || text.includes('/view?filename=') || text.includes('/api/view_image/')) {
+              loadImageFromUrl(text, '剪贴板图片链接');
+              return;
+            }
+            if (/^[a-zA-Z]:\\.*\.(jpe?g|png|webp|bmp|jfif)$/i.test(text)) {
+              loadLocalImagePath(text);
               return;
             }
           }
+        } catch (err) {
+          console.warn('[Clipboard] navigator.clipboard.readText failed:', err);
         }
-        // Try readText if no direct image blob found
-        if (navigator.clipboard.readText) {
-          const text = await navigator.clipboard.readText();
-          if (text && text.trim().startsWith('data:image/')) {
-            loadBase64Image(text.trim(), '剪贴板 DataURI 图片');
-            return;
-          }
-        }
-        appendLog('⚠️ 剪贴板中未发现图片数据，请先截图 (Win+Shift+S) 或复制图片后重试');
-      } catch (err) {
-        appendLog('💡 提示：若剪贴板 API 未获授权，可直接在页面任意处按键盘 Ctrl+V 粘贴图片！');
       }
+
+      // 3. Prompt user for direct keyboard Ctrl+V
+      appendLog('💡 提示：若浏览器安全限制阻止直接读取剪贴板，请直接按键盘 Ctrl+V 快捷键即可粘贴图片！');
+      const dropZone = document.getElementById('dropZone');
+      if (dropZone) dropZone.focus();
     }
 
     document.getElementById('refImage').addEventListener('change', function(e) {
@@ -352,7 +418,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       const dt = e.dataTransfer;
       if (dt && dt.files && dt.files.length > 0) {
         for (let i = 0; i < dt.files.length; i++) {
-          if (isImageFile(dt.files[i])) {
+          if (isImageFile(dt.files[i]) || (dt.files[i].type && dt.files[i].type.startsWith('image/'))) {
             handleImageFile(dt.files[i], dt.files[i].name);
             break;
           }
@@ -368,7 +434,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       const dt = e.dataTransfer;
       if (dt && dt.files && dt.files.length > 0) {
         for (let i = 0; i < dt.files.length; i++) {
-          if (isImageFile(dt.files[i])) {
+          if (isImageFile(dt.files[i]) || (dt.files[i].type && dt.files[i].type.startsWith('image/'))) {
             handleImageFile(dt.files[i], '拖拽文件: ' + dt.files[i].name);
             break;
           }
@@ -376,61 +442,115 @@ HTML_CONTENT = """<!DOCTYPE html>
       }
     }, false);
 
-    // 全局剪贴板粘贴支持 (Universal Paste / Ctrl+V)
-    window.addEventListener('paste', function(e) {
-      const clipboardData = e.clipboardData || window.clipboardData;
-      if (!clipboardData) return;
+    // 全局剪贴板粘贴捕获 (Universal Paste / Ctrl+V - Capture Phase)
+    async function handleGlobalPaste(e) {
+      const cd = e.clipboardData || window.clipboardData;
+      if (!cd) return;
 
-      // 1. 优先检测 clipboardData.files (文件资源管理器中按 Ctrl+C 复制的文件)
-      if (clipboardData.files && clipboardData.files.length > 0) {
-        for (let i = 0; i < clipboardData.files.length; i++) {
-          const file = clipboardData.files[i];
-          if (isImageFile(file)) {
-            handleImageFile(file, file.name || ('剪贴板图片 (' + new Date().toLocaleTimeString() + ')'));
-            e.preventDefault();
-            return;
-          }
-        }
-      }
+      const isInputFocused = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
 
-      // 2. 检测 clipboardData.items (截图工具 Win+Shift+S / 浏览器右键复制图片)
-      const items = clipboardData.items;
+      // 1. 优先检测 clipboardData.items (截图工具 Win+Shift+S / 浏览器右键复制图片)
+      const items = cd.items;
       if (items && items.length > 0) {
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
-          if (item.type.indexOf('image') !== -1 || item.kind === 'file') {
-            const file = item.getAsFile();
-            if (file && isImageFile(file)) {
-              handleImageFile(file, '剪贴板图片 (' + new Date().toLocaleTimeString() + ')');
+          if (item.type && item.type.startsWith('image/')) {
+            const blob = item.getAsFile();
+            if (blob) {
               e.preventDefault();
+              e.stopPropagation();
+              appendLog('📋 成功捕获剪贴板图片数据 (类型: ' + item.type + ')');
+              handleImageFile(blob, '剪贴板图片 (' + new Date().toLocaleTimeString() + ')');
               return;
             }
           }
         }
       }
 
-      // 3. 检测网页富文本复制的 <img> 标签
-      const html = clipboardData.getData('text/html');
-      if (html) {
-        const m = html.match(/<img[^>]+src=["']([^"']+)["']/i);
-        if (m && m[1]) {
-          const src = m[1];
-          if (src.startsWith('data:image/')) {
-            loadBase64Image(src, '网页剪贴板图片');
+      // 2. 检测 clipboardData.files (文件资源管理器中按 Ctrl+C 复制的文件)
+      if (cd.files && cd.files.length > 0) {
+        for (let i = 0; i < cd.files.length; i++) {
+          const file = cd.files[i];
+          if (isImageFile(file) || (file.type && file.type.startsWith('image/'))) {
             e.preventDefault();
+            e.stopPropagation();
+            appendLog('📋 成功捕获剪贴板图片文件: ' + (file.name || '未命名'));
+            handleImageFile(file, file.name || ('剪贴板图片 (' + new Date().toLocaleTimeString() + ')'));
             return;
           }
         }
       }
 
-      // 4. 检测文本中的 Data URI
-      const text = (clipboardData.getData('text') || '').trim();
-      if (text.startsWith('data:image/')) {
-        loadBase64Image(text, 'Base64 剪贴板图片');
-        e.preventDefault();
+      // 3. 检测 kind === 'file' 的项 (部分截图或粘贴流)
+      if (items && items.length > 0) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.kind === 'file') {
+            const file = item.getAsFile();
+            if (file && (isImageFile(file) || (file.size && file.size > 0))) {
+              e.preventDefault();
+              e.stopPropagation();
+              appendLog('📋 成功捕获剪贴板文件流: ' + (file.name || item.type));
+              handleImageFile(file, file.name || '剪贴板文件');
+              return;
+            }
+          }
+        }
+      }
+
+      // 4. 检测网页富文本复制的 <img> 标签
+      const html = cd.getData('text/html');
+      if (html) {
+        const m = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+        if (m && m[1]) {
+          const src = m[1];
+          e.preventDefault();
+          e.stopPropagation();
+          appendLog('📋 捕获网页图片内容: ' + (src.length > 50 ? src.substring(0, 50) + '...' : src));
+          if (src.startsWith('data:image/')) {
+            loadBase64Image(src, '网页剪贴板图片');
+            return;
+          } else {
+            loadImageFromUrl(src, '网页源图片');
+            return;
+          }
+        }
+      }
+
+      // 5. 检测文本中的 Data URI、图片链接或本地路径
+      const text = (cd.getData('text') || '').trim();
+      if (text) {
+        if (text.startsWith('data:image/')) {
+          e.preventDefault();
+          e.stopPropagation();
+          appendLog('📋 捕获 Base64 DataURI 图片数据');
+          loadBase64Image(text, 'Base64 剪贴板图片');
+          return;
+        }
+        if (/^https?:\/\/.*\.(jpe?g|png|webp|bmp|gif|jfif)(\?.*)?$/i.test(text) || text.includes('/view?filename=') || text.includes('/api/view_image/')) {
+          e.preventDefault();
+          e.stopPropagation();
+          appendLog('📋 捕获图片链接: ' + text);
+          loadImageFromUrl(text, '链接图片');
+          return;
+        }
+        if (/^[a-zA-Z]:\\.*\.(jpe?g|png|webp|bmp|jfif)$/i.test(text)) {
+          e.preventDefault();
+          e.stopPropagation();
+          appendLog('📋 捕获本地图片文件路径: ' + text);
+          loadLocalImagePath(text);
+          return;
+        }
+      }
+
+      // 若聚焦在输入框/文本域且剪贴板仅为普通文本，放行默认文本粘贴
+      if (isInputFocused) {
         return;
       }
-    });
+    }
+
+    document.addEventListener('paste', handleGlobalPaste, true);
+    window.addEventListener('paste', handleGlobalPaste, true);
 
     function clearImage() {
       currentImageBase64 = null;
@@ -440,7 +560,6 @@ HTML_CONTENT = """<!DOCTYPE html>
       document.getElementById('refBadge').style.display = 'none';
       document.getElementById('refThumb').src = '';
       appendLog('已移除参考底图，将执行【文生图】');
-      fetchStatus();
     }
 
     function appendLog(msg) {
@@ -890,6 +1009,8 @@ HTML_CONTENT = """<!DOCTYPE html>
           placeholder.style.display = 'none';
           const btnTab = document.getElementById('btnOpenNewTab');
           if (btnTab) btnTab.style.display = 'inline-block';
+          const btnSetRef = document.getElementById('btnSetAsRef');
+          if (btnSetRef) btnSetRef.style.display = 'inline-block';
           appendLog('已加载最近生成的渲染图片。');
         }
         appendLog('已同步读取 [' + (wf === 'qwen' ? 'Qwen-Image 2.1' : 'Anima Yuri') + '] 当前工作流配置。');
@@ -1028,6 +1149,8 @@ HTML_CONTENT = """<!DOCTYPE html>
           placeholder.style.display = 'none';
           const btnTab = document.getElementById('btnOpenNewTab');
           if (btnTab) btnTab.style.display = 'inline-block';
+          const btnSetRef = document.getElementById('btnSetAsRef');
+          if (btnSetRef) btnSetRef.style.display = 'inline-block';
           genInfo.innerText = `引擎: ${wf.toUpperCase()} | 耗时: ${duration}s | 种子: ${data.seed || '随机'}`;
           appendLog(`🎉 图像生成成功！渲染耗时: ${duration}秒`);
           showNotification('Image Agent Studio', `🎨 图像渲染完成！生成耗时: ${duration}秒`);
@@ -1312,6 +1435,24 @@ class StudioHandler(BaseHTTPRequestHandler):
                 else:
                     self.send_response(404)
                     self.end_headers()
+            elif parsed.path == '/api/proxy_image':
+                target_url = qs.get("url", [""])[0]
+                if target_url:
+                    try:
+                        req = urllib.request.Request(target_url, headers={"User-Agent": "ImageAgentStudio"})
+                        with urllib.request.urlopen(req, timeout=10) as resp:
+                            ct = resp.headers.get("Content-Type", "image/png")
+                            data = resp.read()
+                            self.send_response(200)
+                            self.send_header('Content-Type', ct)
+                            self.send_header('Content-Length', str(len(data)))
+                            self.end_headers()
+                            self.wfile.write(data)
+                            return
+                    except Exception as e:
+                        print("[Proxy Image Error]:", e)
+                self.send_response(400)
+                self.end_headers()
             else:
                 self.send_response(404)
         except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
@@ -1609,6 +1750,34 @@ class StudioHandler(BaseHTTPRequestHandler):
                     self.send_header('Content-Type', 'application/json')
                     self.end_headers()
                     self.wfile.write(json.dumps({"status": "error", "error": "等待生成超时，未获取到新渲染图片"}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "error": str(e)}).encode('utf-8'))
+
+        elif parsed.path == '/api/load_local_image':
+            try:
+                data = json.loads(post_body.decode('utf-8')) if post_body else {}
+                img_path = data.get('path', '').strip().strip('"').strip("'")
+                if os.path.exists(img_path) and os.path.isfile(img_path):
+                    ext = os.path.splitext(img_path)[1].lower().replace('.', '')
+                    if ext in ('jpg', 'jpeg', 'png', 'webp', 'bmp', 'jfif'):
+                        mime = 'jpeg' if ext in ('jpg', 'jpeg') else ext
+                        with open(img_path, 'rb') as f:
+                            raw = f.read()
+                        b64 = base64.b64encode(raw).decode('utf-8')
+                        data_uri = f"data:image/{mime};base64,{b64}"
+                        res = {"status": "success", "data": data_uri, "name": os.path.basename(img_path)}
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/json')
+                        self.end_headers()
+                        self.wfile.write(json.dumps(res).encode('utf-8'))
+                        return
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "error": f"找不到图片文件: {img_path}"}).encode('utf-8'))
             except Exception as e:
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
