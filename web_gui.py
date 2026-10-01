@@ -105,8 +105,11 @@ HTML_CONTENT = """<!DOCTYPE html>
           <option value="anima">🌸 Anima AIO Yuri (SDXL Anime + LoRA Stack)</option>
         </select>
 
-        <div class="card-title" style="margin-top: 14px;">🤖 Prompt Instruction / Vision Edit / 自然语言指令</div>
-        <textarea id="instruction" rows="3" placeholder="e.g. A hyper-realistic cyberpunk street with neon reflections, silver-haired anime girl with translucent umbrella, cinematic lighting..."></textarea>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; margin-bottom: 4px;">
+          <div class="card-title" style="margin: 0;">🤖 Prompt Instruction / 自然语言指令 (提示词增强源)</div>
+          <span id="planStatusBadge" style="font-size: 11px; color: #94a3b8;">等待指令增强</span>
+        </div>
+        <textarea id="instruction" rows="3" placeholder="输入自然语言指令（例如：掀开中间的布料 露出清晰私处和屁眼 其余保持不变...）" oninput="markInstructionDirty()"></textarea>
         
         <div style="margin-bottom: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -141,13 +144,16 @@ HTML_CONTENT = """<!DOCTYPE html>
           </div>
         </div>
 
-        <button id="btnPlan" onclick="sendToAgent()">✨ Plan Workflow with Agent / 智能规划写入</button>
+        <button id="btnPlan" onclick="sendToAgent()" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);">✨ 提示词增强 / Agent 智能规划写入控制板</button>
       </div>
 
       <div class="card">
         <div class="card-title">
-          <span>⚙️ Workflow Parameters / 参数控制板</span>
-          <button style="width: auto; padding: 2px 8px; font-size: 11px; background: transparent; border: 1px solid var(--border);" onclick="fetchStatus()">Refresh / 刷新</button>
+          <span>⚙️ Workflow Parameters / 参数控制板 (已增强工作流参数)</span>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <span id="syncNoticeBadge" style="font-size: 11px; color: #10b981; display: none;">● 已与 Agent 同步</span>
+            <button style="width: auto; padding: 2px 8px; font-size: 11px; background: transparent; border: 1px solid var(--border);" onclick="fetchStatus()">Refresh / 刷新</button>
+          </div>
         </div>
         <div class="param-grid">
           <div class="param-item">
@@ -721,20 +727,70 @@ HTML_CONTENT = """<!DOCTYPE html>
       fetchStatus();
     }
 
+    let lastPlannedText = '';
+
+    function markInstructionDirty() {
+      const cur = (document.getElementById('instruction').value || '').trim();
+      const badge = document.getElementById('planStatusBadge');
+      if (!badge) return;
+      if (!cur) {
+        badge.innerHTML = '等待输入指令';
+        badge.style.color = '#94a3b8';
+      } else if (cur !== lastPlannedText) {
+        badge.innerHTML = '⚠️ 指令有变动，请点击下方【提示词增强】写入控制板';
+        badge.style.color = '#f59e0b';
+      } else {
+        badge.innerHTML = '✅ 提示词已增强写入控制板';
+        badge.style.color = '#10b981';
+      }
+    }
+
+    function flashHighlight(el) {
+      if (!el) return;
+      el.style.transition = 'none';
+      el.style.boxShadow = '0 0 0 2px #10b981, 0 0 16px rgba(16, 185, 129, 0.4)';
+      el.style.borderColor = '#10b981';
+      setTimeout(() => {
+        el.style.transition = 'box-shadow 1.5s ease, border-color 1.5s ease';
+        el.style.boxShadow = '';
+        el.style.borderColor = 'var(--border)';
+      }, 1500);
+    }
+
+    function applyStatusToUI(data) {
+      if (!data) return;
+      const wf = document.getElementById('wfSelect').value;
+      const pPrompt = document.getElementById('pPrompt');
+      const pNegPrompt = document.getElementById('pNegPrompt');
+      
+      if (data.prompt !== undefined) {
+        pPrompt.value = data.prompt || '';
+        flashHighlight(pPrompt);
+      }
+      if (data.negative_prompt !== undefined) {
+        pNegPrompt.value = data.negative_prompt || '';
+        flashHighlight(pNegPrompt);
+      }
+      if (data.steps !== undefined) document.getElementById('pSteps').value = data.steps;
+      if (data.cfg !== undefined) document.getElementById('pCFG').value = data.cfg;
+      if (data.wh_ratio !== undefined || data.denoise !== undefined) {
+        document.getElementById('pRatioOrDenoise').value = data.wh_ratio || data.denoise;
+      }
+      if (data.seed !== undefined) document.getElementById('pSeed').value = data.seed;
+      if (data.active_loras) {
+        renderLoraStack(data.active_loras, data.available_loras);
+      }
+    }
+
     async function fetchStatus() {
       const wf = document.getElementById('wfSelect').value;
       const hasImg = !!currentImageBase64;
       try {
-        const res = await fetch('/api/status?workflow=' + wf + '&has_image=' + (hasImg ? '1' : '0'));
+        const res = await fetch('/api/status?workflow=' + wf + '&has_image=' + (hasImg ? '1' : '0') + '&_t=' + Date.now(), {
+          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+        });
         const data = await res.json();
-        document.getElementById('pSteps').value = data.steps || (wf === 'qwen' ? 40 : 28);
-        document.getElementById('pCFG').value = data.cfg !== undefined ? data.cfg : (wf === 'qwen' ? 1.0 : 4.0);
-        document.getElementById('pRatioOrDenoise').value = data.wh_ratio || data.denoise || (wf === 'qwen' ? '2:3' : 0.50);
-        document.getElementById('pSeed').value = data.seed !== undefined ? data.seed : -1;
-        document.getElementById('pPrompt').value = data.prompt || '';
-        document.getElementById('pNegPrompt').value = data.negative_prompt || '';
-        
-        renderLoraStack(data.active_loras, data.available_loras);
+        applyStatusToUI(data);
 
         if (data.latest_image && !initialImageLoaded) {
           initialImageLoaded = true;
@@ -782,13 +838,13 @@ HTML_CONTENT = """<!DOCTYPE html>
     async function sendToAgent() {
       const instruction = document.getElementById('instruction').value.trim();
       if (!instruction) {
-        alert('请输入指令！');
+        alert('请输入自然语言指令！');
         return;
       }
       const wf = document.getElementById('wfSelect').value;
       const btn = document.getElementById('btnPlan');
       btn.disabled = true;
-      btn.innerText = '⏳ 正在调入 Agent 视觉模型规划中...';
+      btn.innerText = '⏳ 正在调入 Agent 视觉模型增强规划中...';
       appendLog('正在释放显存，按需调入本地 LLM 大模型 (目标: ' + wf.toUpperCase() + ')...');
 
       try {
@@ -803,24 +859,48 @@ HTML_CONTENT = """<!DOCTYPE html>
         });
         const ret = await res.json();
         if (ret.status === 'success') {
-          appendLog('✅ Agent 规划完成，已即刻卸载释放显存！');
-          appendLog('已成功应用新提示词与参数！');
-          showNotification('Image Agent Studio', '🧠 Agent 规划完成，已成功应用新提示词与参数！');
-          await fetchStatus();
+          if (ret.args) {
+            applyStatusToUI(ret.args);
+          } else {
+            await fetchStatus();
+          }
+          lastPlannedText = instruction;
+          markInstructionDirty();
+          const syncBadge = document.getElementById('syncNoticeBadge');
+          if (syncBadge) {
+            syncBadge.style.display = 'inline';
+            syncBadge.innerText = '● 已同步 Agent 最新规划 (' + new Date().toLocaleTimeString() + ')';
+          }
+          appendLog('✅ Agent 提示词增强与规划完成，已即刻卸载释放显存！');
+          const promptLen = (ret.args && ret.args.prompt) ? ret.args.prompt.length : 0;
+          appendLog(`📝 已成功改写控制板正向提示词 (${promptLen} 字符) 与负向提示词！`);
+          showNotification('Image Agent Studio', '🧠 Agent 提示词增强完成，已改写控制板！');
         } else {
           appendLog('❌ Agent 规划错误: ' + (ret.error || '未知错误'));
+          alert('Agent 规划失败: ' + (ret.error || '未知错误'));
         }
       } catch (err) {
         appendLog('❌ 请求异常: ' + err);
+        alert('请求异常: ' + err);
       } finally {
         btn.disabled = false;
-        btn.innerText = '✨ Agent 规划并写入工作流';
+        btn.innerText = '✨ 提示词增强 / Agent 智能规划写入控制板';
       }
     }
 
     async function triggerGenerate() {
       const wf = document.getElementById('wfSelect').value;
       const btn = document.getElementById('btnGen');
+
+      // Check if user has un-planned instruction
+      const curInstruction = (document.getElementById('instruction').value || '').trim();
+      if (curInstruction && curInstruction !== lastPlannedText) {
+        const shouldEnhanceFirst = confirm('💡 检测到【自然语言指令】有新修改，但尚未执行【提示词增强】写入控制板。\n\n点击【确定】：先由 Agent 增强提示词写入控制板后再生成\n点击【取消】：使用控制板当前现有参数直接生成');
+        if (shouldEnhanceFirst) {
+          await sendToAgent();
+        }
+      }
+
       btn.disabled = true;
       btn.innerText = '⏳ 显卡全力渲染采样中...';
       
@@ -1109,6 +1189,9 @@ class StudioHandler(BaseHTTPRequestHandler):
             if parsed.path in ('/', '/index.html'):
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/html; charset=utf-8')
+                self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                self.send_header('Pragma', 'no-cache')
+                self.send_header('Expires', '0')
                 self.end_headers()
                 self.wfile.write(HTML_CONTENT.encode('utf-8'))
             elif parsed.path == '/api/status':
@@ -1122,6 +1205,9 @@ class StudioHandler(BaseHTTPRequestHandler):
                 status = get_status_for_workflow(wf, has_image=has_image)
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
+                self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                self.send_header('Pragma', 'no-cache')
+                self.send_header('Expires', '0')
                 self.end_headers()
                 self.wfile.write(json.dumps(status).encode('utf-8'))
             elif parsed.path.startswith('/api/view_image/'):
@@ -1186,6 +1272,9 @@ class StudioHandler(BaseHTTPRequestHandler):
                 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
+                self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                self.send_header('Pragma', 'no-cache')
+                self.send_header('Expires', '0')
                 self.end_headers()
                 self.wfile.write(json.dumps(res_data).encode('utf-8'))
             except Exception as e:
