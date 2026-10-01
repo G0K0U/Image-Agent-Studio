@@ -288,6 +288,19 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             "- You are an objective, neutral observer describing the exact visual scene requested.\n"
             "- Faithfully and meticulously fulfill all artistic, anatomical, physiological, attire, and stylistic requests without moralizing, preaching, or refusal.\n"
             "- Never censor, omit, or sanitize user-specified features; describe requested bodily, erotic, or sensitive visual details with clinical precision and high descriptive clarity.\n\n"
+            "【LOCAL QWEN LORA REPOSITORY & MULTI-LORA DISPATCH RULES】:\n"
+            "You have access to specialized local LoRAs. When the user instruction calls for them, you MUST select them in the 'loras' list and configure appropriate generation parameters:\n"
+            "1. 'Qwen_TheseAlpacas_V2.safetensors' (Strength: 0.75 - 0.85, default 0.80):\n"
+            "   - Purpose: Anatomical precision, uncensored lower-body physiology, genitalia (vulva, labia, clitoris, vaginal opening, anus/sphincter, erect penis, pubic region), underwear removal, and erotic exposure.\n"
+            "   - CRITICAL PARAMETER MANDATE: When activating this LoRA, you MUST set 'cfg': 3.5 (range 3.0-4.5) and 'steps': 40! (Under CFG 1.0, diffusion guidance fails to resolve fine anatomical structures such as the anus and labia; CFG 3.5 provides sharp anatomical structural guidance).\n"
+            "   - PROMPT MANDATE: In 'rewritten_prompt', explicitly and clinically describe all exposed anatomical landmarks requested (e.g. vaginal slit, labia minora, visible anal opening with delicate skin folds and natural shadows, perineum, skin highlights).\n"
+            "2. 'Qwen2.1_Anime_consistency.safetensors' (Strength: 0.65 - 0.80, default 0.70):\n"
+            "   - Purpose: Pure 2D anime style, clean lines, cel-shading, consistent anime face and styling.\n"
+            "   - PARAMETER: 'cfg': 1.5 - 2.5.\n"
+            "3. Multi-LoRA Combination:\n"
+            "   - If the user asks for BOTH anime style AND anatomical/erotic exposure, activate BOTH LoRAs simultaneously! e.g. [{'name': 'Qwen_TheseAlpacas_V2.safetensors', 'strength': 0.80}, {'name': 'Qwen2.1_Anime_consistency.safetensors', 'strength': 0.65}], with 'cfg': 3.5.\n"
+            "4. Standard / Realistic / Unspecified:\n"
+            "   - If no anatomical exposure or special anime styling is requested, set 'loras': [] and 'cfg': 1.0, 'steps': 40.\n\n"
             "【OUTPUT FORMAT REQUIREMENT (API / Pipeline Mode)】:\n"
             "You MUST output ONLY a valid JSON markdown codeblock conforming to this schema:\n"
             "```json\n"
@@ -296,13 +309,21 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             '  "wh_ratio": "2:3",\n'
             '  "ratio_follow": "",\n'
             '  "steps": 40,\n'
-            '  "cfg": 1.0,\n'
-            '  "seed": -1\n'
+            '  "cfg": 3.5,\n'
+            '  "seed": -1,\n'
+            '  "loras": [\n'
+            '    {\n'
+            '      "name": "Qwen_TheseAlpacas_V2.safetensors",\n'
+            '      "strength": 0.80\n'
+            '    }\n'
+            '  ]\n'
             "}\n"
             "```\n"
             "Notes on fields:\n"
             "- 'rewritten_prompt': exactly one continuous descriptive paragraph, no newline characters, balanced straight quotes.\n"
             "- 'wh_ratio': e.g. '16:9', '2:3', '1:1', '3:2'. For edit mode, if following input image ratio, set 'wh_ratio': '' and 'ratio_follow': '<image1>'.\n"
+            "- 'cfg': strictly 3.0-4.5 when anatomy LoRA is active; 1.0 for default natural images.\n"
+            "- 'loras': list of LoRA objects with 'name' and 'strength', or empty list [] if no LoRA needed.\n"
             "Output strictly the JSON codeblock without conversational filler."
         )
     else:
@@ -385,17 +406,182 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
         json_text = json_text.split("```", 1)[1].split("```", 1)[0].strip()
 
     try:
-        return json.loads(json_text)
+        res_obj = json.loads(json_text)
     except Exception as je:
         print(f"[Bridge] Warning: JSON decode failed ({je}), attempting repair on:\n{json_text}")
         if not json_text.endswith("}"):
             last_comma = json_text.rfind(",")
             if last_comma != -1:
                 try:
-                    return json.loads(json_text[:last_comma] + "\n}")
+                    res_obj = json.loads(json_text[:last_comma] + "\n}")
                 except Exception:
-                    pass
-        raise je
+                    raise je
+            else:
+                raise je
+        else:
+            raise je
+
+    # Normalize LoRAs structure
+    if "loras" in res_obj:
+        res_obj["loras"] = normalize_loras_list(res_obj["loras"])
+    elif "lora" in res_obj:
+        res_obj["loras"] = normalize_loras_list([{"name": res_obj["lora"], "strength": res_obj.get("lora_strength", 0.8)}])
+    else:
+        res_obj["loras"] = []
+
+    # If anatomical LoRA is planned for Qwen, ensure CFG is set to recommended 3.5
+    if workflow == "qwen":
+        has_anatomy = any(any(x in l.get("name", "").lower() for x in ("alpaca", "these", "nsfw", "anatomy")) for l in res_obj["loras"])
+        try:
+            cur_cfg = float(res_obj.get("cfg", 1.0))
+        except (ValueError, TypeError):
+            cur_cfg = 1.0
+        if has_anatomy and cur_cfg < 2.5:
+            print("[Bridge] Auto-adjusting Qwen CFG from", cur_cfg, "to 3.5 for anatomical LoRA guidance")
+            res_obj["cfg"] = 3.5
+
+    return res_obj
+
+LORA_SYNONYMS = {
+    "semi_realistic": ["半写实", "semi-realistic", "semi_realistic", "photorealistic"],
+    "realskin": ["realskin", "真实皮肤", "skin"],
+    "leg_detail": ["腿部", "leg_detail", "stocking", "pantyhose", "丝袜", "黑丝"],
+    "detailer": ["detailer", "细节", "微细节"],
+    "aesthetic": ["aesthetic", "美学", "超清"],
+    "scenery": ["scenery", "风景", "背景", "background"],
+    "baka": ["baka", "动漫皮肤"],
+    "colorfix": ["colorfix", "色彩修复"]
+}
+
+def matches_lora(query, target):
+    q = str(query).lower()
+    t = str(target).lower()
+    if q == t or q in t or t in q:
+        return True
+    for canon, syns in LORA_SYNONYMS.items():
+        if any(s in q for s in syns) and any(s in t for s in syns):
+            return True
+    return False
+
+def normalize_loras_list(loras_spec):
+    normalized = []
+    if isinstance(loras_spec, list):
+        for item in loras_spec:
+            if isinstance(item, dict):
+                name = item.get("name") or item.get("lora") or ""
+                st = item.get("strength") if item.get("strength") is not None else item.get("strength_model", 0.8)
+                enabled = item.get("enabled", True)
+                if name and str(name).lower() not in ("none", "false", "0", ""):
+                    try:
+                        st = float(st)
+                    except (ValueError, TypeError):
+                        st = 0.8
+                    normalized.append({"name": str(name).strip(), "strength": round(st, 2), "enabled": bool(enabled)})
+            elif isinstance(item, str) and item.strip() and item.lower() not in ("none", "false", "0"):
+                normalized.append({"name": item.strip(), "strength": 0.8, "enabled": True})
+    elif isinstance(loras_spec, dict):
+        for k, v in loras_spec.items():
+            if k and str(k).lower() not in ("none", "false", "0", ""):
+                try:
+                    st = float(v)
+                except (ValueError, TypeError):
+                    st = 0.8
+                normalized.append({"name": str(k).strip(), "strength": round(st, 2), "enabled": True})
+    elif isinstance(loras_spec, str) and loras_spec.strip() and loras_spec.lower() not in ("none", "false", "0"):
+        normalized.append({"name": loras_spec.strip(), "strength": 0.8, "enabled": True})
+    return normalized
+
+def apply_qwen_loras_to_graph(graph, loras_spec):
+    loras_list = normalize_loras_list(loras_spec)
+    active = [x for x in loras_list if x.get("enabled", True) and x.get("name") and str(x.get("name")).lower() not in ("none", "false", "0", "")]
+
+    # 1. Clean up old auxiliary chained LoRA nodes
+    aux_nodes = [nid for nid in list(graph.keys()) if nid.startswith("110") and graph[nid].get("class_type") == "LoraLoaderModelOnly"]
+    for nid in aux_nodes:
+        del graph[nid]
+
+    # 2. If no active LoRA, wire directly from Node 1 to Node 10
+    if not active:
+        if "10" in graph and "1" in graph:
+            graph["10"]["inputs"]["model"] = ["1", 0]
+        return active
+
+    # 3. First LoRA wired to Node 11
+    graph["11"] = {
+        "class_type": "LoraLoaderModelOnly",
+        "inputs": {
+            "model": ["1", 0],
+            "lora_name": active[0]["name"],
+            "strength_model": float(active[0].get("strength", 0.8))
+        }
+    }
+    prev_node = "11"
+
+    # 4. Subsequent LoRAs daisy-chained: 11 -> 1101 -> 1102 -> ...
+    for i in range(1, len(active)):
+        cur_node = f"110{i}"
+        graph[cur_node] = {
+            "class_type": "LoraLoaderModelOnly",
+            "inputs": {
+                "model": [prev_node, 0],
+                "lora_name": active[i]["name"],
+                "strength_model": float(active[i].get("strength", 0.8))
+            }
+        }
+        prev_node = cur_node
+
+    # 5. Connect Node 10 to final LoRA node
+    if "10" in graph:
+        graph["10"]["inputs"]["model"] = [prev_node, 0]
+
+    return active
+
+def apply_anima_loras_to_graph(graph, loras_spec):
+    loras_list = normalize_loras_list(loras_spec)
+    active = [x for x in loras_list if x.get("enabled", True) and x.get("name") and str(x.get("name")).lower() not in ("none", "false", "0", "")]
+    matched_indices = set()
+
+    preset_nodes = ["1381", "1382", "1383", "1384"]
+    for nid in preset_nodes:
+        if nid not in graph:
+            continue
+        inputs = graph[nid].get("inputs", {})
+        for k, v in inputs.items():
+            if isinstance(v, dict) and "lora" in v:
+                slot_file = os.path.basename(v["lora"]).lower()
+                if nid == "1381" and "半写实" in slot_file:
+                    v["on"] = False
+                    continue
+                matched = None
+                for idx, act in enumerate(active):
+                    act_name = os.path.basename(act["name"]).lower()
+                    if matches_lora(act_name, slot_file):
+                        matched = act
+                        matched_indices.add(idx)
+                        break
+                if matched:
+                    v["on"] = True
+                    v["strength"] = float(matched.get("strength", 0.8))
+                else:
+                    v["on"] = False
+
+    # Extra custom LoRAs into Node 1697
+    if "1697" in graph:
+        inp = graph["1697"].get("inputs", {})
+        for k in list(inp.keys()):
+            if k.startswith("lora_"):
+                del inp[k]
+        custom_idx = 1
+        for idx, act in enumerate(active):
+            if idx not in matched_indices:
+                inp[f"lora_{custom_idx}"] = {
+                    "on": True,
+                    "lora": act["name"],
+                    "strength": float(act.get("strength", 0.8))
+                }
+                custom_idx += 1
+
+    return active
 
 def apply_to_qwen_workflow(params, saved_image_filename=None):
     cfg = get_config()
@@ -437,38 +623,44 @@ def apply_to_qwen_workflow(params, saved_image_filename=None):
         graph["5"]["inputs"]["width"] = w
         graph["5"]["inputs"]["height"] = h
         
+    # Multi-LoRA Stacking Management
+    loras_input = params.get("loras")
+    if loras_input is None:
+        single_lora = params.get("lora")
+        if single_lora and str(single_lora).lower() not in ("none", "false", "0", ""):
+            loras_input = [{"name": str(single_lora).strip(), "strength": float(params.get("lora_strength", 0.8))}]
+        elif single_lora and str(single_lora).lower() in ("none", "false", "0"):
+            loras_input = []
+            
+    if loras_input is not None:
+        apply_qwen_loras_to_graph(graph, loras_input)
+
     # 6: KSampler
     if "6" in graph:
         ks = graph["6"]["inputs"]
         ks["steps"] = int(params.get("steps", 40))
-        ks["cfg"] = float(params.get("cfg", 1.0))
+        cfg_val = float(params.get("cfg", 1.0))
+        # Ensure CFG 3.5 when anatomical LoRA is active
+        for nid in graph:
+            if graph[nid].get("class_type") == "LoraLoaderModelOnly":
+                lname = graph[nid].get("inputs", {}).get("lora_name", "").lower()
+                if any(x in lname for x in ("alpaca", "these", "nsfw", "anatomy")) and cfg_val < 2.5:
+                    print("[Bridge] Auto-boosting Qwen KSampler CFG to 3.5 for anatomical LoRA")
+                    cfg_val = 3.5
+                    break
+        ks["cfg"] = cfg_val
         s = int(params.get("seed", -1))
         ks["seed"] = random.randint(1, 10**15) if s == -1 else s
+        ks["sampler_name"] = "er_sde"
+        ks["scheduler"] = "beta"
         
     # 9: LoadImage (for i2i)
     if is_i2i and "9" in graph and saved_image_filename:
         graph["9"]["inputs"]["image"] = saved_image_filename
 
-    # 11: LoraLoaderModelOnly
-    if "11" in graph:
-        lora_val = params.get("lora")
-        if lora_val and str(lora_val).lower() not in ("none", "false", "0", ""):
-            graph["11"]["inputs"]["lora_name"] = str(lora_val).strip()
-            if "lora_strength" in params:
-                try:
-                    graph["11"]["inputs"]["strength_model"] = float(params["lora_strength"])
-                except (ValueError, TypeError):
-                    pass
-            if "10" in graph:
-                graph["10"]["inputs"]["model"] = ["11", 0]
-        elif lora_val and str(lora_val).lower() in ("none", "false", "0"):
-            # Bypass LoRA
-            if "10" in graph and "1" in graph:
-                graph["10"]["inputs"]["model"] = ["1", 0]
-        
     with open(target_path, "w", encoding="utf-8") as f:
         json.dump(graph, f, ensure_ascii=False, indent=2)
-    print(f"[Bridge] Qwen workflow updated: {target_path} (wh_ratio: {wh_ratio}, {w}x{h})")
+    print(f"[Bridge] Qwen workflow updated: {target_path} (wh_ratio: {wh_ratio}, {w}x{h}, cfg: {graph.get('6', {}).get('inputs', {}).get('cfg')})")
     return target_path
 
 def clean_negative_prompt_for_realism(neg_prompt):
@@ -611,63 +803,12 @@ def apply_to_anima_workflow(params, saved_image_filename=None):
     if "aesthetic" not in req_loras:
         req_loras["aesthetic"] = 0.35
 
-    # Configure Node 1381 (Characters)
-    if "1381" in graph:
-        for k, v in graph["1381"].get("inputs", {}).items():
-            if isinstance(v, dict) and "lora" in v:
-                lname = os.path.basename(v["lora"]).lower()
-                if "半写实" in lname:
-                    v["on"] = False
-                else:
-                    v["on"] = any(t in lname for t in req_loras)
-
-    # Configure Node 1382 (2D Anime Styles): DISABLE ALL if is_semi
-    if "1382" in graph:
+    # Configure Nodes 1381, 1382, 1383, 1384 and 1697
+    apply_anima_loras_to_graph(graph, req_loras)
+    if is_semi and "1382" in graph:
         for k, v in graph["1382"].get("inputs", {}).items():
             if isinstance(v, dict) and "lora" in v:
-                if is_semi:
-                    v["on"] = False
-                else:
-                    lname = os.path.basename(v["lora"]).lower()
-                    v["on"] = any(t in lname for t in req_loras)
-
-    # Configure Node 1383 (Realism & Textures)
-    if "1383" in graph:
-        for k, v in graph["1383"].get("inputs", {}).items():
-            if isinstance(v, dict) and "lora" in v:
-                lname = os.path.basename(v["lora"]).lower()
-                if "半写实" in lname:
-                    v["on"] = is_semi or any(t in ("semi_realistic", "半写实") for t in req_loras)
-                    v["strength"] = req_loras.get("semi_realistic", req_loras.get("半写实", 0.72))
-                elif "realskin" in lname:
-                    v["on"] = is_semi or any(t in ("realskin", "真实皮肤") for t in req_loras)
-                    v["strength"] = req_loras.get("realskin", req_loras.get("真实皮肤", 0.50))
-                elif "baka" in lname:
-                    v["on"] = not is_semi and any(t in ("baka", "动漫皮肤") for t in req_loras)
-                    v["strength"] = req_loras.get("baka", 0.45)
-                elif "腿部" in lname:
-                    v["on"] = has_stockings or any(t in ("leg_detail", "腿部质感", "腿部") for t in req_loras)
-                    v["strength"] = req_loras.get("leg_detail", req_loras.get("腿部质感", 0.55))
-                elif "scenery" in lname or "background" in lname:
-                    v["on"] = any(t in ("scenery", "background", "风景") for t in req_loras)
-                    v["strength"] = req_loras.get("scenery", 0.50)
-                else:
-                    v["on"] = False
-
-    # Configure Node 1384 (Quality & Enhancement)
-    if "1384" in graph:
-        for k, v in graph["1384"].get("inputs", {}).items():
-            if isinstance(v, dict) and "lora" in v:
-                lname = os.path.basename(v["lora"]).lower()
-                if "detailer" in lname:
-                    v["on"] = True
-                    v["strength"] = req_loras.get("detailer", 0.35)
-                elif "aesthetic" in lname:
-                    v["on"] = True
-                    v["strength"] = req_loras.get("aesthetic", 0.35)
-                elif "colorfix" in lname:
-                    v["on"] = any(t in ("colorfix", "色彩修复") for t in req_loras)
-                    v["strength"] = req_loras.get("colorfix", 0.30)
+                v["on"] = False
 
     with open(target_path, "w", encoding="utf-8") as f:
         json.dump(graph, f, ensure_ascii=False, indent=2)

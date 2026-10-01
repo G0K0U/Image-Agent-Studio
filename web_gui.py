@@ -176,24 +176,23 @@ HTML_CONTENT = """<!DOCTYPE html>
           <textarea id="pNegPrompt" rows="3"></textarea>
         </div>
 
-        <div id="loraSection" style="margin-top: 5px; font-size: 12px; color: #a5b4fc; display: none;">
-          <span style="color: var(--muted); font-size: 11px; display: block; margin-bottom: 4px;">Active LoRA Stack / 挂载的 LoRA 列表:</span>
-          <div id="pLoras" style="background: #0b0d13; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-family: monospace;">None</div>
-        </div>
-
-        <div id="qwenLoraSection" style="margin-top: 10px; padding: 10px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label style="font-size: 11px; font-weight: 600; color: #a5b4fc; text-transform: uppercase; letter-spacing: 0.5px;">🎨 Qwen LoRA Selection / 模型选取</label>
-            <span id="lblLoraStatus" style="font-size: 11px; color: #818cf8;">Strength / 强度: <b id="valLoraStrength">0.80</b></span>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 140px; gap: 10px; align-items: center;">
-            <select id="pQwenLora" style="background: #0b0d13; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; color: var(--text); font-size: 12px; width: 100%;" onchange="onLoraSelectChange()">
-              <option value="">None / 禁用 LoRA</option>
-            </select>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <input type="range" id="pQwenLoraStrength" min="0" max="1" step="0.05" value="0.8" style="flex: 1; accent-color: #6366f1; cursor: pointer;" oninput="onLoraStrengthChange(this.value)">
-              <input type="number" id="pQwenLoraStrengthNum" min="0" max="1" step="0.05" value="0.8" style="width: 52px; padding: 4px; font-size: 12px; text-align: center; background: #0b0d13; border: 1px solid var(--border); border-radius: 4px; color: var(--text);" oninput="onLoraStrengthChange(this.value)">
+        <div id="multiLoraSection" style="margin-top: 12px; padding: 12px; background: rgba(99, 102, 241, 0.06); border: 1px solid rgba(99, 102, 241, 0.22); border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 12px; font-weight: 600; color: #a5b4fc; letter-spacing: 0.3px;">🧬 Multi-LoRA Stack / 多 LoRA 堆叠管理</span>
+              <span id="loraCountBadge" class="badge" style="font-size: 10px; padding: 1px 7px;">0 Active</span>
             </div>
+            <button type="button" onclick="addLoraRow()" style="width: auto; padding: 4px 10px; font-size: 11px; background: #4f46e5; border-radius: 4px; display: flex; align-items: center; gap: 4px;">
+              <span>➕ 添加 LoRA</span>
+            </button>
+          </div>
+          
+          <div id="loraStackList" style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; padding-right: 2px;">
+            <!-- Dynamic LoRA rows -->
+          </div>
+          
+          <div id="emptyLoraNotice" style="font-size: 11px; color: #64748b; text-align: center; padding: 10px; border: 1px dashed var(--border); border-radius: 6px; margin-top: 4px;">
+            当前未启用任何 LoRA（直连基础底模出图）。<br>可点击右上角 "➕ 添加 LoRA" 手动挂载，或使用 Agent 智能规划自动匹配。
           </div>
         </div>
 
@@ -343,88 +342,267 @@ HTML_CONTENT = """<!DOCTYPE html>
       b.scrollTop = b.scrollHeight;
     }
 
+    let availableLorasList = [];
+
+    function updateLoraCountBadge() {
+      const rows = document.querySelectorAll('.lora-row');
+      let activeCount = 0;
+      rows.forEach(r => {
+        const chk = r.querySelector('.lora-enable-chk');
+        if (chk && chk.checked) activeCount++;
+      });
+      const badge = document.getElementById('loraCountBadge');
+      if (badge) badge.innerText = `${activeCount} 启用 / ${rows.length} 挂载`;
+      const emptyNotice = document.getElementById('emptyLoraNotice');
+      if (emptyNotice) emptyNotice.style.display = rows.length === 0 ? 'block' : 'none';
+    }
+
+    function syncLoraSlider(slider) {
+      const row = slider.closest('.lora-row');
+      if (!row) return;
+      const num = row.querySelector('.lora-num');
+      const val = parseFloat(slider.value);
+      if (num) num.value = val.toFixed(2);
+    }
+
+    function syncLoraNum(numInput) {
+      const row = numInput.closest('.lora-row');
+      if (!row) return;
+      let val = parseFloat(numInput.value);
+      if (isNaN(val)) val = 0.8;
+      val = Math.min(1.0, Math.max(0.0, val));
+      numInput.value = val.toFixed(2);
+      const slider = row.querySelector('.lora-slider');
+      if (slider) slider.value = val;
+    }
+
+    function removeLoraRow(btn) {
+      const row = btn.closest('.lora-row');
+      if (row) row.remove();
+      updateLoraCountBadge();
+    }
+
+    function createLoraSelectElement(wf, selectedVal) {
+      const sel = document.createElement('select');
+      sel.className = 'lora-select';
+      sel.style.cssText = 'margin-bottom: 0; flex: 1; font-size: 12px; padding: 6px 8px; background: #0b0d13; border: 1px solid var(--border); border-radius: 6px; color: var(--text);';
+
+      const optDefault = document.createElement('option');
+      optDefault.value = '';
+      optDefault.textContent = '-- 请选择 LoRA 模型 --';
+      sel.appendChild(optDefault);
+
+      if (!availableLorasList || !availableLorasList.length) return sel;
+
+      const groupSpecial = document.createElement('optgroup');
+      const groupAll = document.createElement('optgroup');
+
+      if (wf === 'qwen') {
+        groupSpecial.label = '🌟 Qwen 专属增强 LoRA';
+        groupAll.label = '📦 所有可用模型';
+        availableLorasList.forEach(lora => {
+          const opt = document.createElement('option');
+          opt.value = lora;
+          opt.textContent = lora;
+          const low = lora.toLowerCase();
+          if (low.includes('qwen') || low.includes('alpaca') || low.includes('these') || low.includes('nsfw')) {
+            groupSpecial.appendChild(opt);
+          } else {
+            groupAll.appendChild(opt);
+          }
+        });
+      } else {
+        groupSpecial.label = '🌸 Anima 核心画风与质感 LoRA';
+        groupAll.label = '📦 所有可用模型';
+        availableLorasList.forEach(lora => {
+          const opt = document.createElement('option');
+          opt.value = lora;
+          opt.textContent = lora;
+          const low = lora.toLowerCase();
+          if (low.includes('半写实') || low.includes('realskin') || low.includes('腿部') || low.includes('detailer') || low.includes('aesthetic') || low.includes('scenery') || low.includes('colorfix') || low.includes('baka')) {
+            groupSpecial.appendChild(opt);
+          } else {
+            groupAll.appendChild(opt);
+          }
+        });
+      }
+
+      if (groupSpecial.children.length > 0) sel.appendChild(groupSpecial);
+      if (groupAll.children.length > 0) sel.appendChild(groupAll);
+
+      if (selectedVal) {
+        let found = false;
+        for (let i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === selectedVal || sel.options[i].value.endsWith(selectedVal)) {
+            sel.selectedIndex = i;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          const customOpt = document.createElement('option');
+          customOpt.value = selectedVal;
+          customOpt.textContent = selectedVal;
+          sel.appendChild(customOpt);
+          sel.value = selectedVal;
+        }
+      }
+
+      return sel;
+    }
+
+    function addLoraRow(initialLora = '', initialStrength = 0.8, isEnabled = true) {
+      const wf = document.getElementById('wfSelect').value;
+      const list = document.getElementById('loraStackList');
+      if (!list) return;
+
+      const row = document.createElement('div');
+      row.className = 'lora-row';
+      row.style.cssText = 'background: #10131d; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px;';
+
+      const topRow = document.createElement('div');
+      topRow.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+
+      const chk = document.createElement('input');
+      chk.type = 'checkbox';
+      chk.className = 'lora-enable-chk';
+      chk.checked = isEnabled;
+      chk.title = '勾选以启用该 LoRA / 取消勾选临时跳过';
+      chk.style.cssText = 'width: 16px; height: 16px; margin-bottom: 0; cursor: pointer; accent-color: #6366f1;';
+      chk.onchange = updateLoraCountBadge;
+
+      const sel = createLoraSelectElement(wf, initialLora);
+      if (!initialLora) {
+        if (wf === 'qwen') {
+          for (let opt of sel.options) {
+            if (opt.value.includes('Alpaca') || opt.value.includes('NSFW') || opt.value.includes('Qwen')) {
+              sel.value = opt.value;
+              break;
+            }
+          }
+        } else {
+          for (let opt of sel.options) {
+            if (opt.value.includes('半写实') || opt.value.includes('RealSkin')) {
+              sel.value = opt.value;
+              break;
+            }
+          }
+        }
+      }
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.innerHTML = '✕';
+      delBtn.title = '从当前堆叠中移除此 LoRA';
+      delBtn.style.cssText = 'width: 28px; height: 28px; padding: 0; font-size: 13px; background: #ef444422; color: #f87171; border: 1px solid #ef444444; border-radius: 4px; flex-shrink: 0; cursor: pointer;';
+      delBtn.onclick = function() { removeLoraRow(delBtn); };
+
+      topRow.appendChild(chk);
+      topRow.appendChild(sel);
+      topRow.appendChild(delBtn);
+
+      const bottomRow = document.createElement('div');
+      bottomRow.style.cssText = 'display: flex; align-items: center; gap: 8px; padding-left: 24px;';
+
+      const lbl = document.createElement('span');
+      lbl.innerText = '权重:';
+      lbl.style.cssText = 'font-size: 11px; color: var(--muted); width: 30px;';
+
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.className = 'lora-slider';
+      slider.min = '0';
+      slider.max = '1';
+      slider.step = '0.05';
+      slider.value = initialStrength !== undefined ? initialStrength : 0.8;
+      slider.style.cssText = 'flex: 1; accent-color: #6366f1; cursor: pointer;';
+      slider.oninput = function() { syncLoraSlider(slider); };
+
+      const num = document.createElement('input');
+      num.type = 'number';
+      num.className = 'lora-num';
+      num.min = '0';
+      num.max = '1';
+      num.step = '0.05';
+      num.value = parseFloat(slider.value).toFixed(2);
+      num.style.cssText = 'width: 52px; padding: 3px 4px; font-size: 11px; text-align: center; margin-bottom: 0; background: #0b0d13; border: 1px solid var(--border); border-radius: 4px; color: var(--text);';
+      num.oninput = function() { syncLoraNum(num); };
+
+      bottomRow.appendChild(lbl);
+      bottomRow.appendChild(slider);
+      bottomRow.appendChild(num);
+
+      row.appendChild(topRow);
+      row.appendChild(bottomRow);
+
+      list.appendChild(row);
+      updateLoraCountBadge();
+    }
+
+    function renderLoraStack(activeLoras, availableLoras) {
+      if (availableLoras && availableLoras.length) {
+        availableLorasList = availableLoras;
+      }
+      const list = document.getElementById('loraStackList');
+      if (!list) return;
+      list.innerHTML = '';
+
+      if (activeLoras && activeLoras.length) {
+        activeLoras.forEach(item => {
+          let name = '';
+          let st = 0.8;
+          let enabled = true;
+          if (typeof item === 'string') {
+            name = item;
+          } else if (typeof item === 'object') {
+            name = item.name || item.path || '';
+            st = item.strength !== undefined ? item.strength : 0.8;
+            enabled = item.enabled !== false;
+          }
+          if (name) {
+            addLoraRow(name, st, enabled);
+          }
+        });
+      }
+      updateLoraCountBadge();
+    }
+
+    function collectActiveLorasFromUI() {
+      const rows = document.querySelectorAll('.lora-row');
+      const loras = [];
+      rows.forEach(r => {
+        const chk = r.querySelector('.lora-enable-chk');
+        const sel = r.querySelector('.lora-select');
+        const num = r.querySelector('.lora-num');
+        if (sel && sel.value) {
+          loras.push({
+            name: sel.value,
+            strength: parseFloat(num ? num.value : 0.8),
+            enabled: chk ? chk.checked : true
+          });
+        }
+      });
+      return loras;
+    }
+
     function onWorkflowChange() {
       const wf = document.getElementById('wfSelect').value;
       const pill = document.getElementById('curEnginePill');
-      const loraSec = document.getElementById('loraSection');
-      const qwenLoraSec = document.getElementById('qwenLoraSection');
       const negSec = document.getElementById('negPromptSection');
       const lbl = document.getElementById('lblRatioOrDenoise');
 
       if (wf === 'qwen') {
         pill.innerText = 'Qwen-Image 2.1 (进阶)';
         pill.className = 'workflow-pill pill-qwen';
-        loraSec.style.display = 'none';
-        if (qwenLoraSec) qwenLoraSec.style.display = 'block';
         negSec.style.display = 'none';
         lbl.innerText = '画幅比例 (Ratio: 16:9, 2:3, 1:1)';
       } else {
         pill.innerText = 'Anima AIO Yuri (SDXL)';
         pill.className = 'workflow-pill pill-anima';
-        loraSec.style.display = 'block';
-        if (qwenLoraSec) qwenLoraSec.style.display = 'none';
         negSec.style.display = 'block';
         lbl.innerText = '去噪强度 (Denoise)';
       }
       fetchStatus();
-    }
-
-    function onLoraStrengthChange(val) {
-      val = parseFloat(val);
-      if (isNaN(val)) val = 0.8;
-      val = Math.min(1.0, Math.max(0.0, val));
-      const valStr = val.toFixed(2);
-      const slider = document.getElementById('pQwenLoraStrength');
-      const numInput = document.getElementById('pQwenLoraStrengthNum');
-      const lbl = document.getElementById('valLoraStrength');
-      if (slider) slider.value = val;
-      if (numInput) numInput.value = val;
-      if (lbl) lbl.innerText = valStr;
-    }
-
-    function onLoraSelectChange() {
-      const sel = document.getElementById('pQwenLora');
-      const slider = document.getElementById('pQwenLoraStrength');
-      if (sel && sel.value && (!slider.value || parseFloat(slider.value) === 0)) {
-        onLoraStrengthChange(0.80);
-      }
-    }
-
-    function populateQwenLoras(availableLoras, selectedLora, loraStrength) {
-      const sel = document.getElementById('pQwenLora');
-      if (!sel) return;
-
-      const currentVal = selectedLora !== undefined ? selectedLora : sel.value;
-      sel.innerHTML = '<option value="">None / 禁用 LoRA</option>';
-
-      if (!availableLoras || !availableLoras.length) return;
-
-      const qwenGroup = document.createElement('optgroup');
-      qwenGroup.label = '🌟 Qwen 专用结构/画风增强 LoRA';
-      const otherGroup = document.createElement('optgroup');
-      otherGroup.label = '📦 所有可用 LoRA';
-
-      availableLoras.forEach(lora => {
-        const opt = document.createElement('option');
-        opt.value = lora;
-        opt.textContent = lora;
-        const low = lora.toLowerCase();
-        if (low.includes('qwen') || low.includes('alpaca') || low.includes('these')) {
-          qwenGroup.appendChild(opt);
-        } else {
-          otherGroup.appendChild(opt);
-        }
-      });
-
-      if (qwenGroup.children.length > 0) sel.appendChild(qwenGroup);
-      if (otherGroup.children.length > 0) sel.appendChild(otherGroup);
-
-      if (currentVal) {
-        sel.value = currentVal;
-      }
-      if (loraStrength !== undefined && loraStrength !== null) {
-        onLoraStrengthChange(loraStrength);
-      }
     }
 
     async function fetchStatus() {
@@ -439,14 +617,8 @@ HTML_CONTENT = """<!DOCTYPE html>
         document.getElementById('pSeed').value = data.seed !== undefined ? data.seed : -1;
         document.getElementById('pPrompt').value = data.prompt || '';
         document.getElementById('pNegPrompt').value = data.negative_prompt || '';
-        const lorasElem = document.getElementById('pLoras');
-        if (lorasElem) {
-          lorasElem.innerText = (data.active_loras && data.active_loras.length) ? data.active_loras.join(' | ') : '无';
-        }
         
-        if (wf === 'qwen') {
-          populateQwenLoras(data.available_loras, data.selected_lora, data.lora_strength);
-        }
+        renderLoraStack(data.active_loras, data.available_loras);
 
         if (data.latest_image && !initialImageLoaded) {
           initialImageLoaded = true;
@@ -551,8 +723,7 @@ HTML_CONTENT = """<!DOCTYPE html>
         cfg: parseFloat(document.getElementById('pCFG').value || (wf === 'qwen' ? 1.0 : 4.0)),
         ratio_or_denoise: document.getElementById('pRatioOrDenoise').value,
         seed: document.getElementById('pSeed').value,
-        lora: (wf === 'qwen' && document.getElementById('pQwenLora')) ? document.getElementById('pQwenLora').value : '',
-        lora_strength: (wf === 'qwen' && document.getElementById('pQwenLoraStrength')) ? parseFloat(document.getElementById('pQwenLoraStrength').value) : 0.8
+        loras: collectActiveLorasFromUI()
       };
 
       const startTime = Date.now();
@@ -635,9 +806,7 @@ def get_status_for_workflow(wf="qwen", has_image=None):
         "seed": -1,
         "active_loras": [],
         "latest_image": None,
-        "selected_lora": "",
-        "lora_strength": 0.8,
-        "available_loras": get_available_loras() if wf == "qwen" else []
+        "available_loras": get_available_loras()
     }
     
     if wf == "qwen":
@@ -670,26 +839,28 @@ def get_status_for_workflow(wf="qwen", has_image=None):
                         if rw == w and rh == h:
                             status["wh_ratio"] = r
                             break
-                if "11" in d and d["11"].get("class_type") in ("LoraLoaderModelOnly", "LoraLoader"):
-                    inp = d["11"].get("inputs", {})
-                    is_active = True
-                    if "10" in d:
-                        model_link = d["10"].get("inputs", {}).get("model", [])
-                        if isinstance(model_link, list) and model_link and model_link[0] != "11":
-                            is_active = False
-                    if is_active:
-                        status["selected_lora"] = os.path.basename(inp.get("lora_name", ""))
-                        status["lora_strength"] = inp.get("strength_model", 0.8)
-                    else:
-                        status["selected_lora"] = ""
-                        status["lora_strength"] = 0.0
-
-                for nid, nval in d.items():
-                    if isinstance(nval, dict) and nval.get("class_type") in ("LoraLoaderModelOnly", "LoraLoader"):
-                        lora = os.path.basename(nval.get("inputs", {}).get("lora_name", ""))
-                        st = nval.get("inputs", {}).get("strength_model", 1.0)
-                        if lora:
-                            status["active_loras"].append(f"{lora} ({st})")
+                if "10" in d and "1" in d:
+                    model_link = d["10"].get("inputs", {}).get("model", [])
+                    if isinstance(model_link, list) and model_link and model_link[0] != "1":
+                        cur_id = model_link[0]
+                        chain = []
+                        visited = set()
+                        while cur_id and cur_id in d and d[cur_id].get("class_type") in ("LoraLoaderModelOnly", "LoraLoader") and cur_id not in visited:
+                            visited.add(cur_id)
+                            chain.append(cur_id)
+                            prev = d[cur_id].get("inputs", {}).get("model", [])
+                            cur_id = prev[0] if (isinstance(prev, list) and prev) else None
+                        chain.reverse()
+                        for nid in chain:
+                            inp = d[nid].get("inputs", {})
+                            lora = os.path.basename(inp.get("lora_name", ""))
+                            st = inp.get("strength_model", 0.8)
+                            if lora:
+                                status["active_loras"].append({
+                                    "name": lora,
+                                    "strength": round(float(st), 2),
+                                    "enabled": True
+                                })
             except Exception as e:
                 print("[Qwen Status Error]:", e)
     else:
@@ -708,13 +879,21 @@ def get_status_for_workflow(wf="qwen", has_image=None):
                     status["cfg"] = inp.get("cfg", 4.0)
                     status["denoise"] = inp.get("denoise", 0.50)
                     status["seed"] = inp.get("seed", -1)
+                seen_names = set()
                 for nid in ["1381", "1382", "1383", "1384", "1697"]:
                     if nid in data:
                         for k, v in data[nid].get("inputs", {}).items():
                             if isinstance(v, dict) and v.get("on") and "lora" in v:
                                 lora_name = os.path.basename(v["lora"])
-                                strength = round(v.get("strength", 1.0), 2)
-                                status["active_loras"].append(f"{lora_name} ({strength})")
+                                strength = round(float(v.get("strength", 1.0)), 2)
+                                if lora_name not in seen_names:
+                                    seen_names.add(lora_name)
+                                    status["active_loras"].append({
+                                        "name": lora_name,
+                                        "path": v["lora"],
+                                        "strength": strength,
+                                        "enabled": True
+                                    })
             except Exception as e:
                 print("[Anima Status Error]:", e)
 
@@ -939,22 +1118,11 @@ class StudioHandler(BaseHTTPRequestHandler):
                         graph["5"]["inputs"]["width"] = w
                         graph["5"]["inputs"]["height"] = h
 
-                    # Handle LoRA selection & strength for Qwen
-                    sel_lora = data.get("lora")
-                    try:
-                        lora_st = float(data.get("lora_strength", 0.8))
-                    except (ValueError, TypeError):
-                        lora_st = 0.8
-                    if "11" in graph:
-                        if sel_lora and str(sel_lora).strip() and str(sel_lora).lower() != "none":
-                            graph["11"]["inputs"]["lora_name"] = str(sel_lora).strip()
-                            graph["11"]["inputs"]["strength_model"] = lora_st
-                            if "10" in graph:
-                                graph["10"]["inputs"]["model"] = ["11", 0]
-                        else:
-                            # Bypass LoRA: link Node 10 directly to Node 1
-                            if "10" in graph and "1" in graph:
-                                graph["10"]["inputs"]["model"] = ["1", 0]
+                    # Handle Multi-LoRA for Qwen
+                    loras_input = data.get("loras")
+                    if loras_input is None and data.get("lora"):
+                        loras_input = [{"name": data["lora"], "strength": data.get("lora_strength", 0.8), "enabled": True}]
+                    image_agent_bridge.apply_qwen_loras_to_graph(graph, loras_input or [])
 
                     with open(target_workflow, 'w', encoding='utf-8') as f:
                         json.dump(graph, f, ensure_ascii=False, indent=2)
@@ -1023,6 +1191,11 @@ class StudioHandler(BaseHTTPRequestHandler):
                     # Sync seed to FaceDetailer if present
                     if "1701" in graph:
                         graph["1701"]["inputs"]["seed"] = cur_seed
+
+                    # Handle Multi-LoRA stacking for Anima
+                    loras_input = data.get("loras")
+                    if loras_input is not None:
+                        image_agent_bridge.apply_anima_loras_to_graph(graph, loras_input)
 
                     with open(target_workflow, 'w', encoding='utf-8') as f:
                         json.dump(graph, f, ensure_ascii=False, indent=2)
