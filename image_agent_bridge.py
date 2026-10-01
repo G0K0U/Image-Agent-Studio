@@ -175,7 +175,7 @@ def start_heretic():
     cmd = [
         exe,
         "-m", model,
-        "-c", "4096",
+        "-c", str(cfg.get("heretic_ctx_size", 8192)),
         "-n", "1024",
         "-b", "256",
         "-ngl", "999",
@@ -665,7 +665,7 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             {"role": "user", "content": user_content}
         ],
         "temperature": 0.35,
-        "max_tokens": 2048,
+        "max_tokens": 1024,
         "presence_penalty": 0.4,
         "frequency_penalty": 0.4,
         "repeat_penalty": 1.15
@@ -677,8 +677,13 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
         headers={"Content-Type": "application/json"}
     )
 
-    res = urllib.request.urlopen(req, timeout=180)
-    data = json.loads(res.read())
+    try:
+        res = urllib.request.urlopen(req, timeout=180)
+        data = json.loads(res.read())
+    except urllib.error.HTTPError as he:
+        err_body = he.read().decode('utf-8', errors='replace')
+        print(f"[Bridge] LLM Server HTTP Error {he.code}: {err_body}")
+        raise RuntimeError(f"LLM Server HTTP Error {he.code}: {err_body}") from he
     raw_content = data["choices"][0]["message"]["content"]
 
     json_text = raw_content.strip()
