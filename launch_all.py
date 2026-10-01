@@ -113,7 +113,7 @@ def main():
         print("  [!] Image Agent Studio (端口 7860) 启动超时或失败，未打开对应网页！")
 
     if comfy_ready:
-        urls.append(("http://127.0.0.1:8191", "ComfyUI 控制台"))
+        urls.append(("http://127.0.0.1:8191/?workflow=qwen", "ComfyUI 控制台 (Qwen 2.1 工作流)"))
     else:
         print("  [!] ComfyUI 引擎 (端口 8191) 启动超时或失败，未打开对应网页！")
 
