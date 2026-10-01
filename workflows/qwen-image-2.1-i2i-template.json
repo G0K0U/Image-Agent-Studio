@@ -26,8 +26,8 @@
         "2",
         0
       ],
-      "prompt": "In-place image manipulation of <image1>: describe specific visual modifications here.",
-      "negative_prompt": "",
+      "prompt": "Perform a high-fidelity style transfer from anime to photorealistic cosplay photography, strictly preserving the subject's facial identity, long dark hair with bangs, kneeling pose on the red cushioned stool, and surrounding white roses. The character is an East Asian young woman with delicate baby-face features; enhance her expression slightly to be more vivid while maintaining a dazed gaze filled with longing desire. Her skin must appear realistically pale, translucent, and smooth with natural sheen under soft professional studio lighting that mimics indoor natural light. Focus intensely on enhancing the texture of the black stockings: render them as ultra-realistic sheer fabric with visible fine mesh weave patterns, realistic tension lines around the thighs and knees, and subtle reflections indicating a silky material quality; ensure no mosaic, censorship bars, or watermarks are present anywhere in the image. The lace details on her lingerie should look like intricate physical embroidery rather than flat illustration. If nipples or vaginal openings are exposed due to the pose or clothing state, they must be rendered with natural pinkish-flesh tones and realistic anatomical detail without any blurring.",
+      "negative_prompt": "inverted anatomy, upside down genitals, deformed crotch, fused buttocks, merged cleft, sealed cleft, giant oversized genitalia, exaggerated wrinkled skin, gaping orifice, mutated anatomy, extra limbs, underwear covering, bar censor, mosaic censor",
       "resolution": 1024,
       "vae": [
         "3",
@@ -42,8 +42,8 @@
   "5": {
     "class_type": "EmptyLatentImage",
     "inputs": {
-      "width": 864,
-      "height": 1208,
+      "width": 832,
+      "height": 1216,
       "batch_size": 1
     }
   },
@@ -54,7 +54,7 @@
         "10",
         0
       ],
-      "seed": 78591955348988,
+      "seed": 251836977464350,
       "steps": 40,
       "cfg": 2.8,
       "sampler_name": "er_sde",
@@ -100,14 +100,14 @@
   "9": {
     "class_type": "LoadImage",
     "inputs": {
-      "image": "agent_ref_1790840188.jpg"
+      "image": "agent_ref_1790842149.jpg"
     }
   },
   "10": {
     "class_type": "QwenImage21Cache",
     "inputs": {
       "model": [
-        "1101",
+        "1104",
         0
       ],
       "device": "auto",
@@ -132,8 +132,41 @@
         "11",
         0
       ],
-      "lora_name": "qwen21_vagina_v1.safetensors",
-      "strength_model": 0.65
+      "lora_name": "RealStockings_QWEN.safetensors",
+      "strength_model": 0.7
+    }
+  },
+  "1102": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "1101",
+        0
+      ],
+      "lora_name": "NSFW Qwen Lora.safetensors",
+      "strength_model": 0.55
+    }
+  },
+  "1103": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "1102",
+        0
+      ],
+      "lora_name": "RealStockings_QWEN.safetensors",
+      "strength_model": 0.7
+    }
+  },
+  "1104": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "1103",
+        0
+      ],
+      "lora_name": "nicegirls_qwen12.safetensors",
+      "strength_model": 0.6
     }
   }
 }
