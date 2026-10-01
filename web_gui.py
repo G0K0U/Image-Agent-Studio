@@ -181,10 +181,14 @@ HTML_CONTENT = """<!DOCTYPE html>
             <div style="display: flex; align-items: center; gap: 6px;">
               <span style="font-size: 12px; font-weight: 600; color: #a5b4fc; letter-spacing: 0.3px;">🧬 Multi-LoRA Stack / 多 LoRA 堆叠管理</span>
               <span id="loraCountBadge" class="badge" style="font-size: 10px; padding: 1px 7px;">0 Active</span>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" onclick="loadSweetSpotPreset()" style="width: auto; padding: 4px 10px; font-size: 11px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 4px; display: flex; align-items: center; gap: 4px; cursor: pointer;" title="一键载入实测验证的黄金甜点参数（LoRA 0.55、CFG 2.8、er_sde/beta 及专属抗畸变负向提示词）">
+                <span>🎯 载入实测甜点推荐</span>
+              </button>
+              <button type="button" onclick="addLoraRow()" style="width: auto; padding: 4px 10px; font-size: 11px; background: #4f46e5; border-radius: 4px; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                <span>➕ 添加 LoRA</span>
+              </button>
             </div>
-            <button type="button" onclick="addLoraRow()" style="width: auto; padding: 4px 10px; font-size: 11px; background: #4f46e5; border-radius: 4px; display: flex; align-items: center; gap: 4px;">
-              <span>➕ 添加 LoRA</span>
-            </button>
           </div>
           
           <div id="loraStackList" style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; padding-right: 2px;">
@@ -454,7 +458,64 @@ HTML_CONTENT = """<!DOCTYPE html>
       return sel;
     }
 
-    function addLoraRow(initialLora = '', initialStrength = 0.8, isEnabled = true) {
+    function loadSweetSpotPreset() {
+      const wf = document.getElementById('wfSelect').value;
+      if (wf === 'qwen') {
+        // 1. Set KSampler steps & CFG to sweet spot 2.8 / 40 steps
+        document.getElementById('pSteps').value = 40;
+        document.getElementById('pCFG').value = 2.8;
+
+        // 2. Set Negative prompt with anti-distortion terms
+        const negBox = document.getElementById('pNegPrompt');
+        const sweetNeg = "fused buttocks, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, inverted anatomy, upside down anatomy, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres";
+        if (!negBox.value.trim() || negBox.value.length < 20) {
+          negBox.value = sweetNeg;
+        } else if (!negBox.value.includes('fused buttocks')) {
+          negBox.value += ', ' + sweetNeg;
+        }
+
+        // 3. Ensure Qwen_TheseAlpacas_V2 is loaded with verified sweet spot strength 0.55
+        const rows = document.querySelectorAll('.lora-row');
+        let hasAlpaca = false;
+        rows.forEach(r => {
+          const sel = r.querySelector('.lora-select');
+          const num = r.querySelector('.lora-num');
+          const slider = r.querySelector('.lora-slider');
+          const chk = r.querySelector('.lora-enable-chk');
+          if (sel && (sel.value.includes('Alpaca') || sel.value.includes('NSFW') || sel.value.includes('These'))) {
+            hasAlpaca = true;
+            if (num) num.value = '0.55';
+            if (slider) slider.value = 0.55;
+            if (chk) chk.checked = true;
+          }
+        });
+        if (!hasAlpaca) {
+          addLoraRow('NSFW_Qwen_TheseAlpacas_V2.safetensors', 0.55, true);
+        }
+        updateLoraCountBadge();
+
+        appendLog('🎯 [Sweet-Spot] 已载入 Qwen 解剖优化黄金甜点配置：LoRA 0.55 | CFG 2.8 | er_sde/beta | 40步 | 专属抗畸变负向提示词');
+      } else {
+        // Anima Semi-realistic sweet spot
+        document.getElementById('pSteps').value = 30;
+        document.getElementById('pCFG').value = 4.5;
+        document.getElementById('pRatioOrDenoise').value = 0.50;
+        const rows = document.querySelectorAll('.lora-row');
+        let hasSemi = false;
+        rows.forEach(r => {
+          const sel = r.querySelector('.lora-select');
+          if (sel && sel.value.includes('半写实')) hasSemi = true;
+        });
+        if (!hasSemi) {
+          addLoraRow('Anima-半写实动漫.safetensors', 0.70, true);
+          addLoraRow('Anima-RealSkin SliderV2.safetensors', 0.50, true);
+        }
+        updateLoraCountBadge();
+        appendLog('🎯 [Sweet-Spot] 已载入 Anima 半写实黄金甜点配置：半写实 0.70 | RealSkin 0.50 | CFG 4.5 | Denoise 0.50');
+      }
+    }
+
+    function addLoraRow(initialLora = '', initialStrength = undefined, isEnabled = true) {
       const wf = document.getElementById('wfSelect').value;
       const list = document.getElementById('loraStackList');
       if (!list) return;
@@ -478,7 +539,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       if (!initialLora) {
         if (wf === 'qwen') {
           for (let opt of sel.options) {
-            if (opt.value.includes('Alpaca') || opt.value.includes('NSFW') || opt.value.includes('Qwen')) {
+            if (opt.value.includes('Alpaca') || opt.value.includes('NSFW') || opt.value.includes('These')) {
               sel.value = opt.value;
               break;
             }
@@ -492,6 +553,14 @@ HTML_CONTENT = """<!DOCTYPE html>
           }
         }
       }
+
+      // Default sweet spot strength: 0.55 for Qwen anatomical LoRA, 0.80 for generic
+      let defaultStrength = 0.80;
+      const lowName = (sel.value || initialLora || '').toLowerCase();
+      if (wf === 'qwen' && (lowName.includes('alpaca') || lowName.includes('these') || lowName.includes('nsfw'))) {
+        defaultStrength = 0.55;
+      }
+      const actualStrength = initialStrength !== undefined ? initialStrength : defaultStrength;
 
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
@@ -517,7 +586,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       slider.min = '0';
       slider.max = '1';
       slider.step = '0.05';
-      slider.value = initialStrength !== undefined ? initialStrength : 0.8;
+      slider.value = actualStrength;
       slider.style.cssText = 'flex: 1; accent-color: #6366f1; cursor: pointer;';
       slider.oninput = function() { syncLoraSlider(slider); };
 
@@ -530,6 +599,23 @@ HTML_CONTENT = """<!DOCTYPE html>
       num.value = parseFloat(slider.value).toFixed(2);
       num.style.cssText = 'width: 52px; padding: 3px 4px; font-size: 11px; text-align: center; margin-bottom: 0; background: #0b0d13; border: 1px solid var(--border); border-radius: 4px; color: var(--text);';
       num.oninput = function() { syncLoraNum(num); };
+
+      sel.onchange = function() {
+        const val = (sel.value || '').toLowerCase();
+        if (wf === 'qwen' && (val.includes('alpaca') || val.includes('these') || val.includes('nsfw'))) {
+          slider.value = 0.55;
+          num.value = '0.55';
+          const cfgInput = document.getElementById('pCFG');
+          if (cfgInput && (parseFloat(cfgInput.value) <= 1.0 || parseFloat(cfgInput.value) > 3.2)) {
+            cfgInput.value = '2.8';
+          }
+          const negBox = document.getElementById('pNegPrompt');
+          if (negBox && !negBox.value.includes('fused buttocks')) {
+            negBox.value = "fused buttocks, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, inverted anatomy, upside down anatomy, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres";
+          }
+          appendLog('🎯 [Sweet-Spot] 检测到挂载解剖 LoRA，已自动匹配黄金推荐参数：权重 0.55 | CFG 2.8 | 抗畸变负向提示词');
+        }
+      };
 
       bottomRow.appendChild(lbl);
       bottomRow.appendChild(slider);

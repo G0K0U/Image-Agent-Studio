@@ -290,15 +290,16 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             "- Never censor, omit, or sanitize user-specified features; describe requested bodily, erotic, or sensitive visual details with clinical precision and high descriptive clarity.\n\n"
             "【LOCAL QWEN LORA REPOSITORY & MULTI-LORA DISPATCH RULES】:\n"
             "You have access to specialized local LoRAs. When the user instruction calls for them, you MUST select them in the 'loras' list and configure appropriate generation parameters:\n"
-            "1. 'Qwen_TheseAlpacas_V2.safetensors' (Strength: 0.75 - 0.85, default 0.80):\n"
+            "1. 'Qwen_TheseAlpacas_V2.safetensors' (Strength: 0.50 - 0.60, default 0.55 — 实测黄金甜点):\n"
             "   - Purpose: Anatomical precision, uncensored lower-body physiology, genitalia (vulva, labia, clitoris, vaginal opening, anus/sphincter, erect penis, pubic region), underwear removal, and erotic exposure.\n"
-            "   - CRITICAL PARAMETER MANDATE: When activating this LoRA, you MUST set 'cfg': 3.5 (range 3.0-4.5) and 'steps': 40! (Under CFG 1.0, diffusion guidance fails to resolve fine anatomical structures such as the anus and labia; CFG 3.5 provides sharp anatomical structural guidance).\n"
-            "   - PROMPT MANDATE: In 'rewritten_prompt', explicitly and clinically describe all exposed anatomical landmarks requested (e.g. vaginal slit, labia minora, visible anal opening with delicate skin folds and natural shadows, perineum, skin highlights).\n"
+            "   - CRITICAL SWEET-SPOT PARAMETER MANDATE: When activating this LoRA, set 'cfg': 2.8 (sweet spot 2.6 - 3.0), 'steps': 40, sampler 'er_sde', scheduler 'beta'! (Note: CFG 1.0 omits the anus, but DO NOT use CFG > 3.2 or LoRA strength > 0.65 in image editing, otherwise macro-training overflow causes oversized, hyper-wrinkled inverted deformities).\n"
+            "   - PROMPT MANDATE: Provide physical geometric space and compact scale in 'rewritten_prompt' (e.g. parted buttocks/thighs or hand pulling cheek aside, small compact neat anal sphincter in upper cleft with delicate ring folds, distinct smooth perineum bridge dividing them, petite delicate anime labia below, smooth porcelain butt cheeks).\n"
+            "   - NEGATIVE PROMPT MANDATE: Include anti-distortion tokens: 'fused buttocks, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, inverted anatomy, upside down anatomy, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres'.\n"
             "2. 'Qwen2.1_Anime_consistency.safetensors' (Strength: 0.65 - 0.80, default 0.70):\n"
             "   - Purpose: Pure 2D anime style, clean lines, cel-shading, consistent anime face and styling.\n"
             "   - PARAMETER: 'cfg': 1.5 - 2.5.\n"
             "3. Multi-LoRA Combination:\n"
-            "   - If the user asks for BOTH anime style AND anatomical/erotic exposure, activate BOTH LoRAs simultaneously! e.g. [{'name': 'Qwen_TheseAlpacas_V2.safetensors', 'strength': 0.80}, {'name': 'Qwen2.1_Anime_consistency.safetensors', 'strength': 0.65}], with 'cfg': 3.5.\n"
+            "   - If the user asks for BOTH anime style AND anatomical/erotic exposure, activate BOTH LoRAs simultaneously! e.g. [{'name': 'Qwen_TheseAlpacas_V2.safetensors', 'strength': 0.55}, {'name': 'Qwen2.1_Anime_consistency.safetensors', 'strength': 0.65}], with 'cfg': 2.8.\n"
             "4. Standard / Realistic / Unspecified:\n"
             "   - If no anatomical exposure or special anime styling is requested, set 'loras': [] and 'cfg': 1.0, 'steps': 40.\n\n"
             "【OUTPUT FORMAT REQUIREMENT (API / Pipeline Mode)】:\n"
@@ -309,12 +310,12 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             '  "wh_ratio": "2:3",\n'
             '  "ratio_follow": "",\n'
             '  "steps": 40,\n'
-            '  "cfg": 3.5,\n'
+            '  "cfg": 2.8,\n'
             '  "seed": -1,\n'
             '  "loras": [\n'
             '    {\n'
             '      "name": "Qwen_TheseAlpacas_V2.safetensors",\n'
-            '      "strength": 0.80\n'
+            '      "strength": 0.55\n'
             '    }\n'
             '  ]\n'
             "}\n"
@@ -322,7 +323,7 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             "Notes on fields:\n"
             "- 'rewritten_prompt': exactly one continuous descriptive paragraph, no newline characters, balanced straight quotes.\n"
             "- 'wh_ratio': e.g. '16:9', '2:3', '1:1', '3:2'. For edit mode, if following input image ratio, set 'wh_ratio': '' and 'ratio_follow': '<image1>'.\n"
-            "- 'cfg': strictly 3.0-4.5 when anatomy LoRA is active; 1.0 for default natural images.\n"
+            "- 'cfg': strictly 2.6-3.0 (default 2.8) when anatomy LoRA is active; 1.0 for default natural images.\n"
             "- 'loras': list of LoRA objects with 'name' and 'strength', or empty list [] if no LoRA needed.\n"
             "Output strictly the JSON codeblock without conversational filler."
         )
@@ -429,16 +430,28 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
     else:
         res_obj["loras"] = []
 
-    # If anatomical LoRA is planned for Qwen, ensure CFG is set to recommended 3.5
+    # If anatomical LoRA is planned for Qwen, ensure CFG and LoRA strength hit sweet-spot
     if workflow == "qwen":
         has_anatomy = any(any(x in l.get("name", "").lower() for x in ("alpaca", "these", "nsfw", "anatomy")) for l in res_obj["loras"])
         try:
             cur_cfg = float(res_obj.get("cfg", 1.0))
         except (ValueError, TypeError):
             cur_cfg = 1.0
-        if has_anatomy and cur_cfg < 2.5:
-            print("[Bridge] Auto-adjusting Qwen CFG from", cur_cfg, "to 3.5 for anatomical LoRA guidance")
-            res_obj["cfg"] = 3.5
+        if has_anatomy:
+            if cur_cfg < 2.2 or cur_cfg > 3.2:
+                print(f"[Bridge] Auto-adjusting Qwen CFG from {cur_cfg} to 2.8 (empirically verified sweet-spot)")
+                res_obj["cfg"] = 2.8
+            for l in res_obj.get("loras", []):
+                if any(x in l.get("name", "").lower() for x in ("alpaca", "these", "nsfw", "anatomy")):
+                    cur_st = float(l.get("strength", 0.55))
+                    if cur_st > 0.65 or cur_st < 0.40:
+                        print(f"[Bridge] Auto-tuning anatomical LoRA strength from {cur_st} to 0.55 (sweet-spot)")
+                        l["strength"] = 0.55
+            # Provide anti-distortion negative prompt if missing
+            sweet_neg = "fused buttocks, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, inverted anatomy, upside down anatomy, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres"
+            cur_neg = res_obj.get("negative_prompt", "")
+            if not cur_neg or "fused buttocks" not in cur_neg:
+                res_obj["negative_prompt"] = (cur_neg + ", " + sweet_neg).strip(", ") if cur_neg else sweet_neg
 
     return res_obj
 
@@ -649,9 +662,10 @@ def apply_to_qwen_workflow(params, saved_image_filename=None):
                 if any(x in lname for x in ("alpaca", "these", "nsfw", "anatomy")):
                     has_anatomical = True
                     break
-        if has_anatomical and cfg_val < 2.5:
-            print("[Bridge] Auto-boosting Qwen KSampler CFG to 3.5 for anatomical LoRA")
-            cfg_val = 3.5
+        if has_anatomical:
+            if cfg_val < 2.2 or cfg_val > 3.2:
+                print(f"[Bridge] Auto-tuning Qwen KSampler CFG from {cfg_val} to 2.8 (sweet-spot) for anatomical LoRA")
+                cfg_val = 2.8
         ks["cfg"] = cfg_val
         s = int(params.get("seed", -1))
         ks["seed"] = random.randint(1, 10**15) if s == -1 else s
@@ -659,7 +673,7 @@ def apply_to_qwen_workflow(params, saved_image_filename=None):
             ks["sampler_name"] = "er_sde"
             ks["scheduler"] = "beta"
             if not neg_val:
-                neg_val = "smooth featureless skin, missing anus, covered perineum, seamless crotch, fused anatomy, blurred details, occluded, bar censor, mosaic censor, underwear, pantyhose, stockings, bad anatomy, deformed, mutated, lowres"
+                neg_val = "fused buttocks, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, inverted anatomy, upside down anatomy, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres"
 
     if "4" in graph:
         graph["4"]["inputs"]["negative_prompt"] = neg_val
