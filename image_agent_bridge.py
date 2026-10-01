@@ -615,6 +615,7 @@ def apply_to_qwen_workflow(params, saved_image_filename=None):
     # 4: TextEncodeQwenImage21
     if "4" in graph:
         graph["4"]["inputs"]["prompt"] = rewritten_prompt
+        neg_val = params.get("negative_prompt", "")
         if is_i2i and saved_image_filename:
             graph["4"]["inputs"]["images.image_1"] = ["9", 0]
             
@@ -640,19 +641,28 @@ def apply_to_qwen_workflow(params, saved_image_filename=None):
         ks = graph["6"]["inputs"]
         ks["steps"] = int(params.get("steps", 40))
         cfg_val = float(params.get("cfg", 1.0))
-        # Ensure CFG 3.5 when anatomical LoRA is active
+        # Ensure CFG 3.5 and er_sde/beta when anatomical LoRA is active
+        has_anatomical = False
         for nid in graph:
             if graph[nid].get("class_type") == "LoraLoaderModelOnly":
                 lname = graph[nid].get("inputs", {}).get("lora_name", "").lower()
-                if any(x in lname for x in ("alpaca", "these", "nsfw", "anatomy")) and cfg_val < 2.5:
-                    print("[Bridge] Auto-boosting Qwen KSampler CFG to 3.5 for anatomical LoRA")
-                    cfg_val = 3.5
+                if any(x in lname for x in ("alpaca", "these", "nsfw", "anatomy")):
+                    has_anatomical = True
                     break
+        if has_anatomical and cfg_val < 2.5:
+            print("[Bridge] Auto-boosting Qwen KSampler CFG to 3.5 for anatomical LoRA")
+            cfg_val = 3.5
         ks["cfg"] = cfg_val
         s = int(params.get("seed", -1))
         ks["seed"] = random.randint(1, 10**15) if s == -1 else s
-        ks["sampler_name"] = "er_sde"
-        ks["scheduler"] = "beta"
+        if cfg_val > 1.5 or has_anatomical:
+            ks["sampler_name"] = "er_sde"
+            ks["scheduler"] = "beta"
+            if not neg_val:
+                neg_val = "smooth featureless skin, missing anus, covered perineum, seamless crotch, fused anatomy, blurred details, occluded, bar censor, mosaic censor, underwear, pantyhose, stockings, bad anatomy, deformed, mutated, lowres"
+
+    if "4" in graph:
+        graph["4"]["inputs"]["negative_prompt"] = neg_val
         
     # 9: LoadImage (for i2i)
     if is_i2i and "9" in graph and saved_image_filename:

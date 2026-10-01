@@ -25,7 +25,7 @@ import random
 import urllib.request
 import urllib.error
 import urllib.parse
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 import image_agent_bridge
 
@@ -171,8 +171,8 @@ HTML_CONTENT = """<!DOCTYPE html>
           <textarea id="pPrompt" rows="4"></textarea>
         </div>
 
-        <div id="negPromptSection" style="margin-top: 5px; display: none;">
-          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">Negative Prompt / 负向提示词</label>
+        <div id="negPromptSection" style="margin-top: 5px;">
+          <label id="lblNegPrompt" style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">Negative Prompt / 负向提示词</label>
           <textarea id="pNegPrompt" rows="3"></textarea>
         </div>
 
@@ -196,7 +196,10 @@ HTML_CONTENT = """<!DOCTYPE html>
           </div>
         </div>
 
-        <button id="btnGen" class="btn-generate" onclick="triggerGenerate()">🚀 Render with ComfyUI / 一键调用渲染生成</button>
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+          <button id="btnGen" class="btn-generate" onclick="triggerGenerate()" style="flex: 1; margin-top: 0;">🚀 Render with ComfyUI / 一键调用渲染生成</button>
+          <button id="btnStop" type="button" onclick="stopGenerate()" style="width: auto; padding: 0 16px; background: #ef444422; color: #f87171; border: 1px solid #ef444444; border-radius: 8px; font-weight: 600; cursor: pointer; display: none;" title="强制中止当前 ComfyUI 生成任务">⏹️ 停止</button>
+        </div>
       </div>
 
       <div class="card">
@@ -591,15 +594,18 @@ HTML_CONTENT = """<!DOCTYPE html>
       const negSec = document.getElementById('negPromptSection');
       const lbl = document.getElementById('lblRatioOrDenoise');
 
+      const negLbl = document.getElementById('lblNegPrompt');
+      negSec.style.display = 'block';
+
       if (wf === 'qwen') {
         pill.innerText = 'Qwen-Image 2.1 (进阶)';
         pill.className = 'workflow-pill pill-qwen';
-        negSec.style.display = 'none';
+        if (negLbl) negLbl.innerText = 'Negative Prompt / 负向提示词 (当 CFG > 1.0 时生效，用于排除平滑皮肤/残缺解剖)';
         lbl.innerText = '画幅比例 (Ratio: 16:9, 2:3, 1:1)';
       } else {
         pill.innerText = 'Anima AIO Yuri (SDXL)';
         pill.className = 'workflow-pill pill-anima';
-        negSec.style.display = 'block';
+        if (negLbl) negLbl.innerText = 'Negative Prompt / 负向提示词';
         lbl.innerText = '去噪强度 (Denoise)';
       }
       fetchStatus();
@@ -827,6 +833,7 @@ def get_status_for_workflow(wf="qwen", has_image=None):
                     d = json.load(f)
                 if "4" in d:
                     status["prompt"] = d["4"].get("inputs", {}).get("prompt", "")
+                    status["negative_prompt"] = d["4"].get("inputs", {}).get("negative_prompt", "")
                 if "6" in d:
                     inp = d["6"].get("inputs", {})
                     status["steps"] = inp.get("steps", 40)
@@ -974,42 +981,45 @@ class StudioHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        cfg = image_agent_bridge.get_config()
-        parsed = urllib.parse.urlparse(self.path)
-        qs = urllib.parse.parse_qs(parsed.query)
-        if parsed.path in ('/', '/index.html'):
-            self.send_response(200)
-            self.send_header('Content-Type', 'text/html; charset=utf-8')
-            self.end_headers()
-            self.wfile.write(HTML_CONTENT.encode('utf-8'))
-        elif parsed.path == '/api/status':
-            wf = qs.get("workflow", ["qwen"])[0]
-            has_image_param = qs.get("has_image", [None])[0]
-            has_image = None
-            if has_image_param == "1":
-                has_image = True
-            elif has_image_param == "0":
-                has_image = False
-            status = get_status_for_workflow(wf, has_image=has_image)
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps(status).encode('utf-8'))
-        elif parsed.path.startswith('/api/view_image/'):
-            filename = os.path.basename(parsed.path)
-            filepath = os.path.join(cfg["comfy_output_dir"], filename)
-            if os.path.exists(filepath):
+        try:
+            cfg = image_agent_bridge.get_config()
+            parsed = urllib.parse.urlparse(self.path)
+            qs = urllib.parse.parse_qs(parsed.query)
+            if parsed.path in ('/', '/index.html'):
                 self.send_response(200)
-                ext = os.path.splitext(filename)[1].lower().replace('.', '')
-                self.send_header('Content-Type', f'image/{ext}')
+                self.send_header('Content-Type', 'text/html; charset=utf-8')
                 self.end_headers()
-                with open(filepath, 'rb') as f:
-                    self.wfile.write(f.read())
+                self.wfile.write(HTML_CONTENT.encode('utf-8'))
+            elif parsed.path == '/api/status':
+                wf = qs.get("workflow", ["qwen"])[0]
+                has_image_param = qs.get("has_image", [None])[0]
+                has_image = None
+                if has_image_param == "1":
+                    has_image = True
+                elif has_image_param == "0":
+                    has_image = False
+                status = get_status_for_workflow(wf, has_image=has_image)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(status).encode('utf-8'))
+            elif parsed.path.startswith('/api/view_image/'):
+                filename = os.path.basename(parsed.path)
+                filepath = os.path.join(cfg["comfy_output_dir"], filename)
+                if os.path.exists(filepath):
+                    self.send_response(200)
+                    ext = os.path.splitext(filename)[1].lower().replace('.', '')
+                    self.send_header('Content-Type', f'image/{ext}')
+                    self.end_headers()
+                    with open(filepath, 'rb') as f:
+                        self.wfile.write(f.read())
+                else:
+                    self.send_response(404)
+                    self.end_headers()
             else:
                 self.send_response(404)
-                self.end_headers()
-        else:
-            self.send_response(404)
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+            pass
 
     def do_POST(self):
         cfg = image_agent_bridge.get_config()
@@ -1100,8 +1110,12 @@ class StudioHandler(BaseHTTPRequestHandler):
                         if "9" in graph:
                             graph["9"]["inputs"]["image"] = saved_filename
 
-                    if data.get("prompt") and "4" in graph:
-                        graph["4"]["inputs"]["prompt"] = data["prompt"]
+                    if "4" in graph:
+                        if data.get("prompt"):
+                            graph["4"]["inputs"]["prompt"] = data["prompt"]
+                        if data.get("negative_prompt") is not None:
+                            graph["4"]["inputs"]["negative_prompt"] = data.get("negative_prompt", "")
+
                     if "6" in graph:
                         ks = graph["6"]["inputs"]
                         if data.get("steps"): ks["steps"] = int(data["steps"])
@@ -1110,6 +1124,9 @@ class StudioHandler(BaseHTTPRequestHandler):
                             try: cur_seed = int(data["seed"])
                             except ValueError: pass
                         ks["seed"] = cur_seed
+                        if ks.get("cfg", 1.0) > 1.5:
+                            ks["sampler_name"] = "er_sde"
+                            ks["scheduler"] = "beta"
                         
                     # Handle resolution from ratio
                     ratio = data.get("ratio_or_denoise", "2:3")
@@ -1302,7 +1319,7 @@ class StudioHandler(BaseHTTPRequestHandler):
 def run_server():
     cfg = image_agent_bridge.get_config()
     port = int(cfg.get("studio_port", 7860))
-    server = HTTPServer(('127.0.0.1', port), StudioHandler)
+    server = ThreadingHTTPServer(('127.0.0.1', port), StudioHandler)
     print(f"============================================================")
     print(f" Image Agent Studio GUI Running at http://127.0.0.1:{port}")
     print(f" Supporting: Qwen-Image 2.1 Advanced & Anima AIO Yuri")

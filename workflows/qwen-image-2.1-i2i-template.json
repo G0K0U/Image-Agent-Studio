@@ -26,7 +26,7 @@
         "2",
         0
       ],
-      "prompt": "masterpiece, best quality, ultra-detailed, cinematic lighting, shallow depth of field",
+      "prompt": "Remove the black underwear from the character in <image1> to reveal the lower pelvic anatomy, maintaining the original anime illustration style with consistent line art and shading. The exposed area features anatomically complete details including distinct labia majora and minora, a visible perineum, and the anus clearly positioned behind the vaginal opening. The character's thighs are pulled back to fully expose the genital region, with skin tones matching the rest of the body and soft highlights indicating smooth texture.",
       "negative_prompt": "",
       "resolution": 1024,
       "vae": [
@@ -54,9 +54,9 @@
         "10",
         0
       ],
-      "seed": 0,
+      "seed": 58025198826128,
       "steps": 40,
-      "cfg": 3.5,
+      "cfg": 4.5,
       "sampler_name": "er_sde",
       "scheduler": "beta",
       "positive": [
@@ -100,7 +100,7 @@
   "9": {
     "class_type": "LoadImage",
     "inputs": {
-      "image": "reference.png"
+      "image": "agent_ref_1790822340.jpg"
     }
   },
   "10": {
@@ -121,8 +121,8 @@
         "1",
         0
       ],
-      "lora_name": "Qwen_TheseAlpacas_V2.safetensors",
-      "strength_model": 0.8
+      "lora_name": "Anima-半厚涂赛璐璐.safetensors",
+      "strength_model": 1.0
     }
   }
 }
