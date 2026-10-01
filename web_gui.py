@@ -546,6 +546,12 @@ def get_status_for_workflow(wf="qwen", has_image=None):
                         if rw == w and rh == h:
                             status["wh_ratio"] = r
                             break
+                for nid, nval in d.items():
+                    if isinstance(nval, dict) and nval.get("class_type") in ("LoraLoaderModelOnly", "LoraLoader"):
+                        lora = os.path.basename(nval.get("inputs", {}).get("lora_name", ""))
+                        st = nval.get("inputs", {}).get("strength_model", 1.0)
+                        if lora:
+                            status["active_loras"].append(f"{lora} ({st})")
             except Exception as e:
                 print("[Qwen Status Error]:", e)
     else:

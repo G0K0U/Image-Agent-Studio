@@ -53,8 +53,8 @@
       "seed": 0,
       "steps": 40,
       "cfg": 1.0,
-      "sampler_name": "euler",
-      "scheduler": "simple",
+      "sampler_name": "er_sde",
+      "scheduler": "beta",
       "positive": [
         "4",
         0
@@ -97,11 +97,22 @@
     "class_type": "QwenImage21Cache",
     "inputs": {
       "model": [
-        "1",
+        "11",
         0
       ],
       "device": "auto",
       "dtype": "default"
+    }
+  },
+  "11": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "lora_name": "Qwen_TheseAlpacas_V2.safetensors",
+      "strength_model": 0.8
     }
   }
 }
