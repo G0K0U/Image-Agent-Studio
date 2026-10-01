@@ -1278,7 +1278,10 @@ def get_status_for_workflow(wf="qwen", has_image=None):
     if wf == "qwen":
         t2i_path = cfg["qwen_t2i_workflow"]
         i2i_path = cfg["qwen_i2i_workflow"]
-        if has_image is True:
+        active_run = os.path.join(SCRIPT_DIR, "workflows", "active_qwen_run.json")
+        if os.path.exists(active_run):
+            target = active_run
+        elif has_image is True:
             target = i2i_path
         elif has_image is False:
             target = t2i_path
@@ -1331,7 +1334,8 @@ def get_status_for_workflow(wf="qwen", has_image=None):
             except Exception as e:
                 print("[Qwen Status Error]:", e)
     else:
-        target = cfg["anima_workflow"]
+        active_run = os.path.join(SCRIPT_DIR, "workflows", "active_anima_run.json")
+        target = active_run if os.path.exists(active_run) else cfg["anima_workflow"]
         if os.path.exists(target):
             try:
                 with open(target, 'r', encoding='utf-8') as f:
@@ -1628,7 +1632,8 @@ class StudioHandler(BaseHTTPRequestHandler):
                         loras_input = [{"name": data["lora"], "strength": data.get("lora_strength", 0.8), "enabled": True}]
                     image_agent_bridge.apply_qwen_loras_to_graph(graph, loras_input or [])
 
-                    with open(target_workflow, 'w', encoding='utf-8') as f:
+                    active_qwen_run = os.path.join(SCRIPT_DIR, "workflows", "active_qwen_run.json")
+                    with open(active_qwen_run, 'w', encoding='utf-8') as f:
                         json.dump(graph, f, ensure_ascii=False, indent=2)
                     output_node_id = "8"
                 else:
@@ -1701,7 +1706,8 @@ class StudioHandler(BaseHTTPRequestHandler):
                     if loras_input is not None:
                         image_agent_bridge.apply_anima_loras_to_graph(graph, loras_input)
 
-                    with open(target_workflow, 'w', encoding='utf-8') as f:
+                    active_anima_run = os.path.join(SCRIPT_DIR, "workflows", "active_anima_run.json")
+                    with open(active_anima_run, 'w', encoding='utf-8') as f:
                         json.dump(graph, f, ensure_ascii=False, indent=2)
                     output_node_id = "1649"
 

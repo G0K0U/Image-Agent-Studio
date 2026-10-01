@@ -21,6 +21,7 @@ config.json
 output/
 ComfyUI/output/
 ComfyUI/input/
+workflows/active_*.json
 
 # Model weights
 *.gguf
