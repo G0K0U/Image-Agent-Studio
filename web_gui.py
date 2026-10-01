@@ -122,21 +122,25 @@ HTML_CONTENT = """<!DOCTYPE html>
             
             <div id="dropPrompt" class="dropzone-content">
               <svg style="width: 24px; height: 24px; opacity: 0.7; margin-bottom: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
               </svg>
               <span>📂 点击选择、<strong>直接拖入图片</strong> 或 <strong>Ctrl+V 粘贴</strong></span>
-              <span style="font-size: 11px; color: #64748b;">支持截图工具、浏览器图片直接拖入或剪贴板粘贴</span>
+              <div style="display: flex; gap: 8px; margin-top: 4px; pointer-events: auto;">
+                <button type="button" onclick="pasteFromClipboard(event)" style="width: auto; padding: 4px 12px; font-size: 11px; background: #3b82f622; color: #60a5fa; border: 1px solid #3b82f644; border-radius: 4px; cursor: pointer;">📋 粘贴剪贴板图片 (Ctrl+V)</button>
+              </div>
+              <span style="font-size: 11px; color: #64748b;">支持 Windows 截图 (Win+Shift+S)、网页复制图片、文件复制</span>
             </div>
 
             <div id="dropLoaded" class="dropzone-loaded" style="display: none;" onclick="event.stopPropagation();">
               <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
                 <img id="refThumb" class="thumb-preview" alt="参考底图" style="cursor: pointer;" onclick="window.open(this.src)" title="点击新窗口查看原图">
                 <div style="text-align: left; overflow: hidden;">
-                  <div id="refImgName" style="font-size: 12px; font-weight: 600; color: #f8fafc; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">参考图已就绪</div>
+                  <div id="refImgName" style="font-size: 12px; font-weight: 600; color: #f8fafc; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">参考图已就绪</div>
                   <div id="refImgSize" style="font-size: 10px; color: var(--muted);">正在读取尺寸...</div>
                 </div>
               </div>
               <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                <button type="button" onclick="pasteFromClipboard(event)" style="width: auto; padding: 5px 10px; font-size: 11px; background: #3b82f622; color: #60a5fa; border: 1px solid #3b82f644;" title="从系统剪贴板粘贴新图片替换当前底图">📋 粘贴</button>
                 <button type="button" onclick="document.getElementById('refImage').click()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #334155;">更换</button>
                 <button type="button" id="btnClearImg" onclick="clearImage()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #ef444422; color: #f87171; border: 1px solid #ef444444;">移除</button>
               </div>
@@ -246,31 +250,79 @@ HTML_CONTENT = """<!DOCTYPE html>
     let currentImageBase64 = null;
     let initialImageLoaded = false;
 
+    function isImageFile(f) {
+      if (!f) return false;
+      if (f.type && f.type.startsWith('image/')) return true;
+      if (f.name && (/\.(jpe?g|png|webp|bmp|gif|tiff?|avif|jfif)$/i).test(f.name)) return true;
+      return false;
+    }
+
+    function loadBase64Image(dataUri, sourceName) {
+      currentImageBase64 = dataUri;
+      document.getElementById('dropPrompt').style.display = 'none';
+      document.getElementById('dropLoaded').style.display = 'flex';
+      document.getElementById('refThumb').src = currentImageBase64;
+      document.getElementById('refBadge').style.display = 'inline';
+      document.getElementById('refImgName').innerText = sourceName || '剪贴板图片已载入';
+      
+      const tmpImg = new Image();
+      tmpImg.onload = function() {
+        document.getElementById('refImgSize').innerText = tmpImg.width + ' × ' + tmpImg.height + ' px';
+      };
+      tmpImg.src = currentImageBase64;
+
+      appendLog('✅ 已成功加载参考底图：' + (sourceName || '剪贴板图片') + '，自动进入【图生图/图像编辑】模式');
+      fetchStatus();
+    }
+
     function handleImageFile(file, sourceName) {
-      if (!file || !file.type.startsWith('image/')) {
-        appendLog('⚠️ 忽略非图片文件: ' + (file ? file.type : '未知'));
+      if (!file) return;
+      if (!isImageFile(file)) {
+        appendLog('⚠️ 忽略非图片文件: ' + (file.name || file.type || '未知类型'));
         return;
       }
       const reader = new FileReader();
       reader.onload = function(evt) {
-        currentImageBase64 = evt.target.result;
-        
-        document.getElementById('dropPrompt').style.display = 'none';
-        document.getElementById('dropLoaded').style.display = 'flex';
-        document.getElementById('refThumb').src = currentImageBase64;
-        document.getElementById('refBadge').style.display = 'inline';
-        document.getElementById('refImgName').innerText = sourceName || file.name || '参考图已载入';
-        
-        const tmpImg = new Image();
-        tmpImg.onload = function() {
-          document.getElementById('refImgSize').innerText = tmpImg.width + ' × ' + tmpImg.height + ' px';
-        };
-        tmpImg.src = currentImageBase64;
-
-        appendLog('✅ 已成功加载参考底图：' + (sourceName || file.name) + '，自动进入【图生图/图像编辑】模式');
-        fetchStatus();
+        loadBase64Image(evt.target.result, sourceName || file.name || '参考图已载入');
+      };
+      reader.onerror = function(err) {
+        appendLog('❌ 读取图片文件失败: ' + err);
       };
       reader.readAsDataURL(file);
+    }
+
+    async function pasteFromClipboard(evt) {
+      if (evt) {
+        evt.stopPropagation();
+        evt.preventDefault();
+      }
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.read) {
+          appendLog('💡 提示：请直接在页面任意处按键盘 Ctrl+V 快捷键粘贴图片');
+          return;
+        }
+        const clipboardItems = await navigator.clipboard.read();
+        for (const item of clipboardItems) {
+          for (const type of item.types) {
+            if (type.startsWith('image/')) {
+              const blob = await item.getType(type);
+              handleImageFile(blob, '剪贴板图片 (' + new Date().toLocaleTimeString() + ')');
+              return;
+            }
+          }
+        }
+        // Try readText if no direct image blob found
+        if (navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          if (text && text.trim().startsWith('data:image/')) {
+            loadBase64Image(text.trim(), '剪贴板 DataURI 图片');
+            return;
+          }
+        }
+        appendLog('⚠️ 剪贴板中未发现图片数据，请先截图 (Win+Shift+S) 或复制图片后重试');
+      } catch (err) {
+        appendLog('💡 提示：若剪贴板 API 未获授权，可直接在页面任意处按键盘 Ctrl+V 粘贴图片！');
+      }
     }
 
     document.getElementById('refImage').addEventListener('change', function(e) {
@@ -300,7 +352,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       const dt = e.dataTransfer;
       if (dt && dt.files && dt.files.length > 0) {
         for (let i = 0; i < dt.files.length; i++) {
-          if (dt.files[i].type.startsWith('image/')) {
+          if (isImageFile(dt.files[i])) {
             handleImageFile(dt.files[i], dt.files[i].name);
             break;
           }
@@ -316,7 +368,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       const dt = e.dataTransfer;
       if (dt && dt.files && dt.files.length > 0) {
         for (let i = 0; i < dt.files.length; i++) {
-          if (dt.files[i].type.startsWith('image/')) {
+          if (isImageFile(dt.files[i])) {
             handleImageFile(dt.files[i], '拖拽文件: ' + dt.files[i].name);
             break;
           }
@@ -324,22 +376,59 @@ HTML_CONTENT = """<!DOCTYPE html>
       }
     }, false);
 
-    // 剪贴板粘贴支持 (Paste / Ctrl+V)
+    // 全局剪贴板粘贴支持 (Universal Paste / Ctrl+V)
     window.addEventListener('paste', function(e) {
       const clipboardData = e.clipboardData || window.clipboardData;
       if (!clipboardData) return;
-      const items = clipboardData.items;
-      if (!items) return;
 
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const file = items[i].getAsFile();
-          if (file) {
-            handleImageFile(file, '剪贴板图片 (' + new Date().toLocaleTimeString() + ')');
+      // 1. 优先检测 clipboardData.files (文件资源管理器中按 Ctrl+C 复制的文件)
+      if (clipboardData.files && clipboardData.files.length > 0) {
+        for (let i = 0; i < clipboardData.files.length; i++) {
+          const file = clipboardData.files[i];
+          if (isImageFile(file)) {
+            handleImageFile(file, file.name || ('剪贴板图片 (' + new Date().toLocaleTimeString() + ')'));
             e.preventDefault();
             return;
           }
         }
+      }
+
+      // 2. 检测 clipboardData.items (截图工具 Win+Shift+S / 浏览器右键复制图片)
+      const items = clipboardData.items;
+      if (items && items.length > 0) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.type.indexOf('image') !== -1 || item.kind === 'file') {
+            const file = item.getAsFile();
+            if (file && isImageFile(file)) {
+              handleImageFile(file, '剪贴板图片 (' + new Date().toLocaleTimeString() + ')');
+              e.preventDefault();
+              return;
+            }
+          }
+        }
+      }
+
+      // 3. 检测网页富文本复制的 <img> 标签
+      const html = clipboardData.getData('text/html');
+      if (html) {
+        const m = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+        if (m && m[1]) {
+          const src = m[1];
+          if (src.startsWith('data:image/')) {
+            loadBase64Image(src, '网页剪贴板图片');
+            e.preventDefault();
+            return;
+          }
+        }
+      }
+
+      // 4. 检测文本中的 Data URI
+      const text = (clipboardData.getData('text') || '').trim();
+      if (text.startsWith('data:image/')) {
+        loadBase64Image(text, 'Base64 剪贴板图片');
+        e.preventDefault();
+        return;
       }
     });
 
