@@ -448,6 +448,23 @@ def apply_to_qwen_workflow(params, saved_image_filename=None):
     # 9: LoadImage (for i2i)
     if is_i2i and "9" in graph and saved_image_filename:
         graph["9"]["inputs"]["image"] = saved_image_filename
+
+    # 11: LoraLoaderModelOnly
+    if "11" in graph:
+        lora_val = params.get("lora")
+        if lora_val and str(lora_val).lower() not in ("none", "false", "0", ""):
+            graph["11"]["inputs"]["lora_name"] = str(lora_val).strip()
+            if "lora_strength" in params:
+                try:
+                    graph["11"]["inputs"]["strength_model"] = float(params["lora_strength"])
+                except (ValueError, TypeError):
+                    pass
+            if "10" in graph:
+                graph["10"]["inputs"]["model"] = ["11", 0]
+        elif lora_val and str(lora_val).lower() in ("none", "false", "0"):
+            # Bypass LoRA
+            if "10" in graph and "1" in graph:
+                graph["10"]["inputs"]["model"] = ["1", 0]
         
     with open(target_path, "w", encoding="utf-8") as f:
         json.dump(graph, f, ensure_ascii=False, indent=2)

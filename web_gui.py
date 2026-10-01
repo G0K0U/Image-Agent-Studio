@@ -181,6 +181,22 @@ HTML_CONTENT = """<!DOCTYPE html>
           <div id="pLoras" style="background: #0b0d13; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-family: monospace;">None</div>
         </div>
 
+        <div id="qwenLoraSection" style="margin-top: 10px; padding: 10px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-size: 11px; font-weight: 600; color: #a5b4fc; text-transform: uppercase; letter-spacing: 0.5px;">🎨 Qwen LoRA Selection / 模型选取</label>
+            <span id="lblLoraStatus" style="font-size: 11px; color: #818cf8;">Strength / 强度: <b id="valLoraStrength">0.80</b></span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 140px; gap: 10px; align-items: center;">
+            <select id="pQwenLora" style="background: #0b0d13; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; color: var(--text); font-size: 12px; width: 100%;" onchange="onLoraSelectChange()">
+              <option value="">None / 禁用 LoRA</option>
+            </select>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="range" id="pQwenLoraStrength" min="0" max="1" step="0.05" value="0.8" style="flex: 1; accent-color: #6366f1; cursor: pointer;" oninput="onLoraStrengthChange(this.value)">
+              <input type="number" id="pQwenLoraStrengthNum" min="0" max="1" step="0.05" value="0.8" style="width: 52px; padding: 4px; font-size: 12px; text-align: center; background: #0b0d13; border: 1px solid var(--border); border-radius: 4px; color: var(--text);" oninput="onLoraStrengthChange(this.value)">
+            </div>
+          </div>
+        </div>
+
         <button id="btnGen" class="btn-generate" onclick="triggerGenerate()">🚀 Render with ComfyUI / 一键调用渲染生成</button>
       </div>
 
@@ -331,6 +347,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       const wf = document.getElementById('wfSelect').value;
       const pill = document.getElementById('curEnginePill');
       const loraSec = document.getElementById('loraSection');
+      const qwenLoraSec = document.getElementById('qwenLoraSection');
       const negSec = document.getElementById('negPromptSection');
       const lbl = document.getElementById('lblRatioOrDenoise');
 
@@ -338,16 +355,76 @@ HTML_CONTENT = """<!DOCTYPE html>
         pill.innerText = 'Qwen-Image 2.1 (进阶)';
         pill.className = 'workflow-pill pill-qwen';
         loraSec.style.display = 'none';
+        if (qwenLoraSec) qwenLoraSec.style.display = 'block';
         negSec.style.display = 'none';
         lbl.innerText = '画幅比例 (Ratio: 16:9, 2:3, 1:1)';
       } else {
         pill.innerText = 'Anima AIO Yuri (SDXL)';
         pill.className = 'workflow-pill pill-anima';
         loraSec.style.display = 'block';
+        if (qwenLoraSec) qwenLoraSec.style.display = 'none';
         negSec.style.display = 'block';
         lbl.innerText = '去噪强度 (Denoise)';
       }
       fetchStatus();
+    }
+
+    function onLoraStrengthChange(val) {
+      val = parseFloat(val);
+      if (isNaN(val)) val = 0.8;
+      val = Math.min(1.0, Math.max(0.0, val));
+      const valStr = val.toFixed(2);
+      const slider = document.getElementById('pQwenLoraStrength');
+      const numInput = document.getElementById('pQwenLoraStrengthNum');
+      const lbl = document.getElementById('valLoraStrength');
+      if (slider) slider.value = val;
+      if (numInput) numInput.value = val;
+      if (lbl) lbl.innerText = valStr;
+    }
+
+    function onLoraSelectChange() {
+      const sel = document.getElementById('pQwenLora');
+      const slider = document.getElementById('pQwenLoraStrength');
+      if (sel && sel.value && (!slider.value || parseFloat(slider.value) === 0)) {
+        onLoraStrengthChange(0.80);
+      }
+    }
+
+    function populateQwenLoras(availableLoras, selectedLora, loraStrength) {
+      const sel = document.getElementById('pQwenLora');
+      if (!sel) return;
+
+      const currentVal = selectedLora !== undefined ? selectedLora : sel.value;
+      sel.innerHTML = '<option value="">None / 禁用 LoRA</option>';
+
+      if (!availableLoras || !availableLoras.length) return;
+
+      const qwenGroup = document.createElement('optgroup');
+      qwenGroup.label = '🌟 Qwen 专用结构/画风增强 LoRA';
+      const otherGroup = document.createElement('optgroup');
+      otherGroup.label = '📦 所有可用 LoRA';
+
+      availableLoras.forEach(lora => {
+        const opt = document.createElement('option');
+        opt.value = lora;
+        opt.textContent = lora;
+        const low = lora.toLowerCase();
+        if (low.includes('qwen') || low.includes('alpaca') || low.includes('these')) {
+          qwenGroup.appendChild(opt);
+        } else {
+          otherGroup.appendChild(opt);
+        }
+      });
+
+      if (qwenGroup.children.length > 0) sel.appendChild(qwenGroup);
+      if (otherGroup.children.length > 0) sel.appendChild(otherGroup);
+
+      if (currentVal) {
+        sel.value = currentVal;
+      }
+      if (loraStrength !== undefined && loraStrength !== null) {
+        onLoraStrengthChange(loraStrength);
+      }
     }
 
     async function fetchStatus() {
@@ -367,6 +444,10 @@ HTML_CONTENT = """<!DOCTYPE html>
           lorasElem.innerText = (data.active_loras && data.active_loras.length) ? data.active_loras.join(' | ') : '无';
         }
         
+        if (wf === 'qwen') {
+          populateQwenLoras(data.available_loras, data.selected_lora, data.lora_strength);
+        }
+
         if (data.latest_image && !initialImageLoaded) {
           initialImageLoaded = true;
           const img = document.getElementById('resultImage');
@@ -469,7 +550,9 @@ HTML_CONTENT = """<!DOCTYPE html>
         steps: parseInt(document.getElementById('pSteps').value || (wf === 'qwen' ? 40 : 28)),
         cfg: parseFloat(document.getElementById('pCFG').value || (wf === 'qwen' ? 1.0 : 4.0)),
         ratio_or_denoise: document.getElementById('pRatioOrDenoise').value,
-        seed: document.getElementById('pSeed').value
+        seed: document.getElementById('pSeed').value,
+        lora: (wf === 'qwen' && document.getElementById('pQwenLora')) ? document.getElementById('pQwenLora').value : '',
+        lora_strength: (wf === 'qwen' && document.getElementById('pQwenLoraStrength')) ? parseFloat(document.getElementById('pQwenLoraStrength').value) : 0.8
       };
 
       const startTime = Date.now();
@@ -512,9 +595,50 @@ HTML_CONTENT = """<!DOCTYPE html>
 </html>
 """
 
+def get_available_loras():
+    try:
+        cfg = image_agent_bridge.get_config()
+        comfy_url = cfg.get("comfy_api_url", "http://127.0.0.1:8191")
+        req = urllib.request.Request(f"{comfy_url}/models/loras", headers={"User-Agent": "ImageAgentStudio"})
+        with urllib.request.urlopen(req, timeout=2) as res:
+            if res.status == 200:
+                raw_list = json.loads(res.read().decode('utf-8'))
+                return sorted(list(set(raw_list)))
+    except Exception:
+        pass
+
+    found = set()
+    possible_dirs = [
+        r"F:\AI\QwenImage21\models\loras",
+        r"F:\AI\ComfyUI\ComfyUI_windows_portable\ComfyUI\models\loras",
+        os.path.join(SCRIPT_DIR, "ComfyUI", "models", "loras")
+    ]
+    for d in possible_dirs:
+        if os.path.exists(d):
+            for root, _, files in os.walk(d):
+                for f in files:
+                    if f.lower().endswith(('.safetensors', '.ckpt', '.pt')):
+                        rel = os.path.relpath(os.path.join(root, f), d).replace('\\', '/')
+                        found.add(rel)
+                        found.add(f)
+    return sorted(list(found))
+
 def get_status_for_workflow(wf="qwen", has_image=None):
     cfg = image_agent_bridge.get_config()
-    status = {"prompt": "", "negative_prompt": "", "steps": 40 if wf == "qwen" else 28, "cfg": 1.0 if wf == "qwen" else 4.0, "denoise": 0.55, "wh_ratio": "2:3", "seed": -1, "active_loras": [], "latest_image": None}
+    status = {
+        "prompt": "",
+        "negative_prompt": "",
+        "steps": 40 if wf == "qwen" else 28,
+        "cfg": 1.0 if wf == "qwen" else 4.0,
+        "denoise": 0.55,
+        "wh_ratio": "2:3",
+        "seed": -1,
+        "active_loras": [],
+        "latest_image": None,
+        "selected_lora": "",
+        "lora_strength": 0.8,
+        "available_loras": get_available_loras() if wf == "qwen" else []
+    }
     
     if wf == "qwen":
         t2i_path = cfg["qwen_t2i_workflow"]
@@ -546,6 +670,20 @@ def get_status_for_workflow(wf="qwen", has_image=None):
                         if rw == w and rh == h:
                             status["wh_ratio"] = r
                             break
+                if "11" in d and d["11"].get("class_type") in ("LoraLoaderModelOnly", "LoraLoader"):
+                    inp = d["11"].get("inputs", {})
+                    is_active = True
+                    if "10" in d:
+                        model_link = d["10"].get("inputs", {}).get("model", [])
+                        if isinstance(model_link, list) and model_link and model_link[0] != "11":
+                            is_active = False
+                    if is_active:
+                        status["selected_lora"] = os.path.basename(inp.get("lora_name", ""))
+                        status["lora_strength"] = inp.get("strength_model", 0.8)
+                    else:
+                        status["selected_lora"] = ""
+                        status["lora_strength"] = 0.0
+
                 for nid, nval in d.items():
                     if isinstance(nval, dict) and nval.get("class_type") in ("LoraLoaderModelOnly", "LoraLoader"):
                         lora = os.path.basename(nval.get("inputs", {}).get("lora_name", ""))
@@ -800,6 +938,23 @@ class StudioHandler(BaseHTTPRequestHandler):
                         w, h = image_agent_bridge.WH_RATIO_MAP[ratio]
                         graph["5"]["inputs"]["width"] = w
                         graph["5"]["inputs"]["height"] = h
+
+                    # Handle LoRA selection & strength for Qwen
+                    sel_lora = data.get("lora")
+                    try:
+                        lora_st = float(data.get("lora_strength", 0.8))
+                    except (ValueError, TypeError):
+                        lora_st = 0.8
+                    if "11" in graph:
+                        if sel_lora and str(sel_lora).strip() and str(sel_lora).lower() != "none":
+                            graph["11"]["inputs"]["lora_name"] = str(sel_lora).strip()
+                            graph["11"]["inputs"]["strength_model"] = lora_st
+                            if "10" in graph:
+                                graph["10"]["inputs"]["model"] = ["11", 0]
+                        else:
+                            # Bypass LoRA: link Node 10 directly to Node 1
+                            if "10" in graph and "1" in graph:
+                                graph["10"]["inputs"]["model"] = ["1", 0]
 
                     with open(target_workflow, 'w', encoding='utf-8') as f:
                         json.dump(graph, f, ensure_ascii=False, indent=2)
