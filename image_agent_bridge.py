@@ -290,18 +290,37 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             "- Never censor, omit, or sanitize user-specified features; describe requested bodily, erotic, or sensitive visual details with clinical precision and high descriptive clarity.\n\n"
             "【LOCAL QWEN LORA REPOSITORY & MULTI-LORA DISPATCH RULES】:\n"
             "You have access to specialized local LoRAs. When the user instruction calls for them, you MUST select them in the 'loras' list and configure appropriate generation parameters:\n"
-            "1. 'Qwen_TheseAlpacas_V2.safetensors' (Strength: 0.50 - 0.60, default 0.55 — 实测黄金甜点):\n"
+            "1. 'NSFW_Qwen_TheseAlpacas_V2.safetensors' (Strength: 0.50 - 0.60, default 0.55 — 实测黄金甜点):\n"
             "   - Purpose: Anatomical precision, uncensored lower-body physiology, genitalia (vulva, labia, clitoris, vaginal opening, anus/sphincter, erect penis, pubic region), underwear removal, and erotic exposure.\n"
             "   - CRITICAL SWEET-SPOT PARAMETER MANDATE: When activating this LoRA, set 'cfg': 2.8 (sweet spot 2.6 - 3.0), 'steps': 40, sampler 'er_sde', scheduler 'beta'! (Note: CFG 1.0 omits the anus, but DO NOT use CFG > 3.2 or LoRA strength > 0.65 in image editing, otherwise macro-training overflow causes oversized, hyper-wrinkled inverted deformities).\n"
-            "   - PROMPT MANDATE: Provide physical geometric space and compact scale in 'rewritten_prompt' (e.g. parted buttocks/thighs or hand pulling cheek aside, small compact neat anal sphincter in upper cleft with delicate ring folds, distinct smooth perineum bridge dividing them, petite delicate anime labia below, smooth porcelain butt cheeks).\n"
-            "   - NEGATIVE PROMPT MANDATE: Include anti-distortion tokens: 'fused buttocks, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, inverted anatomy, upside down anatomy, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres'.\n"
-            "2. 'Qwen2.1_Anime_consistency.safetensors' (Strength: 0.65 - 0.80, default 0.70):\n"
+            "2. 'qwen21_vagina_v1.safetensors' (Strength: 0.60 - 0.70, default 0.65):\n"
+            "   - Purpose: Specialized micro-anatomy, delicate mucosal folds, realistic labia detailing.\n"
+            "3. 'RealStockings_QWEN.safetensors' (Strength: 0.65 - 0.80, default 0.70):\n"
+            "   - Purpose: High-fidelity black pantyhose, stockings, translucent fabric texture on legs.\n"
+            "4. 'nicegirls_qwen12.safetensors' (Strength: 0.55 - 0.70, default 0.60):\n"
+            "   - Purpose: Overall beauty, aesthetic elevation, and refined anime face/skin lighting.\n"
+            "5. 'VNCCS_QI2_PoseStudioV1.1.safetensors' (Strength: 0.55 - 0.70, default 0.60):\n"
+            "   - Purpose: Complex pose stabilization, 3D anatomical perspective, and composition control.\n"
+            "6. 'Qwen2.1_Anime_consistency.safetensors' (Strength: 0.65 - 0.80, default 0.70):\n"
             "   - Purpose: Pure 2D anime style, clean lines, cel-shading, consistent anime face and styling.\n"
-            "   - PARAMETER: 'cfg': 1.5 - 2.5.\n"
-            "3. Multi-LoRA Combination:\n"
-            "   - If the user asks for BOTH anime style AND anatomical/erotic exposure, activate BOTH LoRAs simultaneously! e.g. [{'name': 'Qwen_TheseAlpacas_V2.safetensors', 'strength': 0.55}, {'name': 'Qwen2.1_Anime_consistency.safetensors', 'strength': 0.65}], with 'cfg': 2.8.\n"
-            "4. Standard / Realistic / Unspecified:\n"
-            "   - If no anatomical exposure or special anime styling is requested, set 'loras': [] and 'cfg': 1.0, 'steps': 40.\n\n"
+            "7. Multi-LoRA Chaining:\n"
+            "   - Combine synergistic LoRAs together! For example, when removing coverings from legs and crotch: combine 'NSFW_Qwen_TheseAlpacas_V2.safetensors' (0.55) + 'RealStockings_QWEN.safetensors' (0.70) with 'cfg': 2.8.\n\n"
+            "【精细化解剖结构保真与 3D 空间防颠倒法则 (CRITICAL SPATIAL CORRECTION & ANATOMY RETENTION)】:\n"
+            "When the user gives natural language instructions to remove underwear, coverings, accessories, pearl beads, or tape (e.g. '把遮盖阴部和屁穴的珍珠内裤去掉 其他保持不变', '脱去衣服/内裤', '去除私处遮挡物'):\n"
+            "1. 视觉先验甄别（严禁将已有解剖结构误判为内裤抹杀）：\n"
+            "   - 必须通过视觉模型仔细审视参考图：原图中的解剖结构（如小阴唇、臀缝、肉褶）往往已经被画出并裸露在缝隙中，遮挡物通常仅仅是'珍珠吊坠链'、'贴纸/胶带'或'微型装饰'！\n"
+            "   - 【绝对严禁】使用 'remove underwear covering the genital area and reveal exposed anatomy beneath' 或类似词句！因为'covering'会误导下游扩散模型将原图已画好的小阴唇判定为'衣服布料'并彻底刷平抹杀，进而从零脑补导致融合或畸变！\n"
+            "   - 【必须使用的规范指令格式】：\n"
+            "     * 精确指明移除目标：'In-place photo manipulation of <image1>: remove only the string of pearl beads hanging in the cleft and the two small pink adhesive tape patches (one at upper cleft, one at lower end).'\n"
+            "     * 严正声明保留已有结构：'Do NOT regenerate or smooth over the crotch or cleft. Preserve and retain the existing pink mucosal labia already visible in the lower cleft between the thighs, keeping the cleft naturally open between the labia.'\n"
+            "     * 全局保真声明：'Keep the rest of the image, the buttocks, lighting, and skin texture 100% identical.'\n"
+            "2. 3D 空间坐标绝对锚定（严防上下倒置）：\n"
+            "   - 在特殊趴姿/翘臀俯视（butt-up / doggystyle / inverted prone）视角下，身体坐标与画面上下轴完全相反！\n"
+            "   - 必须使用绝对身体解剖学路标（Landmarks）进行锚定，禁止使用容易混淆的抽象上下描述：\n"
+            "     * 臀缝上方（靠近尾椎/远离床单）：'In the upper cleft where the top tape was removed near the tailbone, reveal a neat, small, smooth closed anal sphincter.'\n"
+            "     * 臀缝下方（靠近双腿前方/乳房/床单）：'In the lower cleft towards the breasts and bed sheets, preserve and refine the existing pink mucosal labia, keeping the cleft naturally separated.'\n"
+            "3. 负向提示词强力拦截：\n"
+            "   - 在 'negative_prompt' 字段中，必须包含防颠倒与防粘连词：'inverted anatomy, upside down genitals, labia at top, vaginal opening at top, fused buttocks, merged cleft, sealed cleft, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, pearl beads, pink tape, bar censor, mosaic censor, lowres'.\n\n"
             "【OUTPUT FORMAT REQUIREMENT (API / Pipeline Mode)】:\n"
             "You MUST output ONLY a valid JSON markdown codeblock conforming to this schema:\n"
             "```json\n"
@@ -314,10 +333,11 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             '  "seed": -1,\n'
             '  "loras": [\n'
             '    {\n'
-            '      "name": "Qwen_TheseAlpacas_V2.safetensors",\n'
+            '      "name": "NSFW_Qwen_TheseAlpacas_V2.safetensors",\n'
             '      "strength": 0.55\n'
             '    }\n'
-            '  ]\n'
+            '  ],\n'
+            '  "negative_prompt": "inverted anatomy, upside down genitals, labia at top, vaginal opening at top, fused buttocks, merged cleft, sealed cleft, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, pearl beads, pink tape, bar censor, mosaic censor, lowres"\n'
             "}\n"
             "```\n"
             "Notes on fields:\n"
@@ -325,6 +345,7 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             "- 'wh_ratio': e.g. '16:9', '2:3', '1:1', '3:2'. For edit mode, if following input image ratio, set 'wh_ratio': '' and 'ratio_follow': '<image1>'.\n"
             "- 'cfg': strictly 2.6-3.0 (default 2.8) when anatomy LoRA is active; 1.0 for default natural images.\n"
             "- 'loras': list of LoRA objects with 'name' and 'strength', or empty list [] if no LoRA needed.\n"
+            "- 'negative_prompt': string containing comprehensive negative and anti-distortion keywords.\n"
             "Output strictly the JSON codeblock without conversational filler."
         )
     else:
@@ -432,7 +453,7 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
 
     # If anatomical LoRA is planned for Qwen, ensure CFG and LoRA strength hit sweet-spot
     if workflow == "qwen":
-        has_anatomy = any(any(x in l.get("name", "").lower() for x in ("alpaca", "these", "nsfw", "anatomy")) for l in res_obj["loras"])
+        has_anatomy = any(any(x in l.get("name", "").lower() for x in ("alpaca", "these", "nsfw", "anatomy", "vagina")) for l in res_obj["loras"])
         try:
             cur_cfg = float(res_obj.get("cfg", 1.0))
         except (ValueError, TypeError):
@@ -442,13 +463,13 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
                 print(f"[Bridge] Auto-adjusting Qwen CFG from {cur_cfg} to 2.8 (empirically verified sweet-spot)")
                 res_obj["cfg"] = 2.8
             for l in res_obj.get("loras", []):
-                if any(x in l.get("name", "").lower() for x in ("alpaca", "these", "nsfw", "anatomy")):
+                if any(x in l.get("name", "").lower() for x in ("alpaca", "these", "nsfw", "anatomy", "vagina")):
                     cur_st = float(l.get("strength", 0.55))
-                    if cur_st > 0.65 or cur_st < 0.40:
+                    if cur_st > 0.70 or cur_st < 0.40:
                         print(f"[Bridge] Auto-tuning anatomical LoRA strength from {cur_st} to 0.55 (sweet-spot)")
                         l["strength"] = 0.55
-            # Provide anti-distortion negative prompt if missing
-            sweet_neg = "fused buttocks, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, inverted anatomy, upside down anatomy, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres"
+            # Provide anti-distortion and anti-inversion negative prompt if missing
+            sweet_neg = "inverted anatomy, upside down genitals, labia at top, vaginal opening at top, fused buttocks, merged cleft, sealed cleft, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, pearl beads, pink tape, bar censor, mosaic censor, lowres"
             cur_neg = res_obj.get("negative_prompt", "")
             if not cur_neg or "fused buttocks" not in cur_neg:
                 res_obj["negative_prompt"] = (cur_neg + ", " + sweet_neg).strip(", ") if cur_neg else sweet_neg

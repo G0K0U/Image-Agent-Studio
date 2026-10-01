@@ -26,7 +26,7 @@
         "2",
         0
       ],
-      "prompt": "In-place photo manipulation of <image1>: remove only the string of pearl beads hanging in the cleft and the two small pink adhesive tape patches. Do NOT regenerate or smooth over the crotch. Preserve and retain the existing pink mucosal labia already visible in the lower cleft between the thighs, keeping the cleft naturally open between the labia. In the upper cleft where the top pink tape was removed near the tailbone, reveal a neat, small, smooth closed anal sphincter. Keep the rest of the image, the buttocks, lighting, and skin texture 100% identical.",
+      "prompt": "Remove the vertical string of white pearls and the pink diamond-shaped clips currently clamped between the anus and the clitoris, revealing the complete, unobstructed female genital area underneath. The exposed region features a small compact neat anal sphincter in the upper cleft with delicate ring folds, a distinct smooth perineum bridge dividing them, and petite delicate labia below with smooth porcelain butt cheeks. Maintain the exact same pose, skin texture, lighting, and background as the input image. fused buttocks, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, inverted anatomy, upside down anatomy, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres",
       "negative_prompt": "fused buttocks, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, inverted anatomy, upside down anatomy, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres",
       "resolution": 1024,
       "vae": [
@@ -54,7 +54,7 @@
         "10",
         0
       ],
-      "seed": 80556962411939,
+      "seed": 176664030664533,
       "steps": 40,
       "cfg": 2.8,
       "sampler_name": "er_sde",
@@ -100,14 +100,14 @@
   "9": {
     "class_type": "LoadImage",
     "inputs": {
-      "image": "agent_ref_1790833715.jpg"
+      "image": "agent_ref_1790834258.jpg"
     }
   },
   "10": {
     "class_type": "QwenImage21Cache",
     "inputs": {
       "model": [
-        "11",
+        "1101",
         0
       ],
       "device": "auto",
@@ -123,6 +123,17 @@
       ],
       "lora_name": "NSFW_Qwen_TheseAlpacas_V2.safetensors",
       "strength_model": 0.55
+    }
+  },
+  "1101": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "11",
+        0
+      ],
+      "lora_name": "qwen21_vagina_v1.safetensors",
+      "strength_model": 0.7
     }
   }
 }

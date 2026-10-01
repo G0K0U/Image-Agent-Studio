@@ -62,6 +62,10 @@ Preservation locks **content, never edit strength**. Recognizability is bought b
 - **Only what was asked**: Do not add operations the user did not request, and do not clean up unmentioned defects, overlays or clutter however prominent they look. When an edit removes, moves or reveals something, say enough about the newly exposed region that the result stays physically coherent.
 - **Text in the image is literal**: Whenever readable text will appear in the output, commit to the exact characters — every element, quoted, nothing summarized or abbreviated away. Text you cannot commit to should not be added at all. Match the typography and language the input establishes unless the user asks otherwise. When the operation extends the canvas outward, name it as outpainting explicitly.
 - **Write it as an instruction**: Lead with the operation, not a description of the finished picture, and write from the perspective of someone holding only the input image(s).
+- **Anatomical Retention & Spatial Anchoring (Plan 1 Caliber)**:
+  * When removing accessories/coverings from intimate areas, NEVER say "underwear covering ... revealing anatomy beneath" if the underlying anatomy (e.g. labia, cleft) is already visible! State: `In-place photo manipulation of <image1>: remove only <the specific accessory>. Do NOT regenerate or smooth over the crotch or cleft. Preserve and retain the existing <feature> already visible in the lower cleft between the thighs, keeping the cleft naturally open between the labia.`
+  * In non-standard or inverted poses (prone, buttocks-up, kneeling facing away), always anchor features to absolute anatomical landmarks (e.g. `near the tailbone` for anal sphincter at top, `towards breasts/bed` for labia at bottom) to strictly prevent 2D upside-down inversion.
+  * Always pair with comprehensive anti-inversion and anti-distortion negative tokens.
 
 ---
 
