@@ -74,9 +74,14 @@ The script will output exact `huggingface-cli` download commands for any missing
 |---|---|---|---|
 | **Diffusion UNet** | `diffusion_models/qwen-image-2.1-Q4_K_M.gguf` | Q4_K_M (~4.3 GB) | [city96/Qwen-Image-2.1-GGUF](https://huggingface.co/city96/Qwen-Image-2.1-GGUF) |
 | **Text Encoder** | `text_encoders/qwen3vl_8b_int8_convrot.safetensors` | INT8 (~8.9 GB) | [Comfy-Org/Qwen-Image-2.1-GGUF](https://huggingface.co/Comfy-Org/Qwen-Image-2.1-GGUF) |
-| **VAE** | `vae/qwen_image_2.1_vae_bf16.safetensors` | BF16 (~644 MB) | [Comfy-Org/Qwen-Image-2.1-GGUF](https://huggingface.co/Comfy-Org/Qwen-Image-2.1-GGUF) |
-| **Anatomy LoRA** | `loras/Qwen_TheseAlpacas_V2.safetensors` | **Strength: 0.8** (`er_sde` + `beta`) | Anatomy, hands & structural detail enhancer (~79.7 MB) |
-| **Anime LoRA** | `loras/Qwen2.1_Anime_consistency.safetensors` | **Strength: 0.6 ~ 0.8** | Anime style consistency enhancer (Optional) |
+| **Flagship Intimacy LoRA** | `loras/NSFW Qwen Lora.safetensors` | **Strength: 0.65** (`er_sde` + `beta`) | High-capacity flagship physiological & anatomical realism (~159.4 MB) |
+| **Structure Enhancer LoRA** | `loras/NSFW_Qwen_TheseAlpacas_V2.safetensors` | **Strength: 0.55 ~ 0.8** | Anatomy, hands & structural detail enhancer (~79.7 MB) |
+| **Intimate Anatomy Co-pilot** | `loras/qwen21_vagina_v1.safetensors` | **Strength: 0.65 ~ 0.7** | Dedicated female mucosal anatomy & anti-smoothing (~79.7 MB) |
+| **Stockings Texture LoRA** | `loras/RealStockings_QWEN.safetensors` | **Strength: 0.65 ~ 0.7** | Photorealistic sheer black stockings, pantyhose & tension weave (~318.8 MB) |
+| **Aesthetic / Beauty LoRA** | `loras/nicegirls_qwen12.safetensors` | **Strength: 0.50 ~ 0.6** | Cosplay photography, youthfulness & porcelain skin (~79.7 MB) |
+| **Pose Studio LoRA** | `loras/VNCCS_QI2_PoseStudioV1.1.safetensors` | **Strength: 0.50 ~ 0.7** | 3D dynamic camera angle & complex body pose control (~159.4 MB) |
+| **Anime Consistency LoRA** | `loras/Qwen2.1_Anime_consistency.safetensors` | **Strength: 0.60 ~ 0.8** | 2D Anime & cel-shading style consistency (~159.4 MB) |
+| **Male Anatomy LoRA** | `loras/Q21 make the penis small.safetensors` | **Strength: 0.50 ~ 0.7** | Male anatomical proportion refinement (~159.4 MB) |
 
 ##### 2. Anima AIO Yuri Engine (SDXL 动漫专精)
 | Component | Filename / Target Path | Recommended Settings | Function & Role |
@@ -188,9 +193,14 @@ python scripts/download_models.py --models-dir /path/to/ComfyUI/models
 |---|---|---|---|
 | **Diffusion UNet** | `diffusion_models/qwen-image-2.1-Q4_K_M.gguf` | Q4_K_M (~4.3 GB) | [city96/Qwen-Image-2.1-GGUF](https://huggingface.co/city96/Qwen-Image-2.1-GGUF) |
 | **Text Encoder** | `text_encoders/qwen3vl_8b_int8_convrot.safetensors` | INT8 (~8.9 GB) | [Comfy-Org/Qwen-Image-2.1-GGUF](https://huggingface.co/Comfy-Org/Qwen-Image-2.1-GGUF) |
-| **VAE** | `vae/qwen_image_2.1_vae_bf16.safetensors` | BF16 (~644 MB) | [Comfy-Org/Qwen-Image-2.1-GGUF](https://huggingface.co/Comfy-Org/Qwen-Image-2.1-GGUF) |
-| **结构增强 LoRA** | `loras/Qwen_TheseAlpacas_V2.safetensors` | **权重 0.8** (`er_sde` + `beta`) | 人体结构、手部与质感细节增强 (~79.7 MB) |
-| **二次元 LoRA** | `loras/Qwen2.1_Anime_consistency.safetensors` | **权重 0.6 ~ 0.8** | 二次元画风与线条一致性增强（可选） |
+| **旗舰私处生理 LoRA** | `loras/NSFW Qwen Lora.safetensors` | **权重 0.65** (`er_sde` + `beta`) | f23gg 旗舰生理结构、粘膜质感与自然解剖 (~159.4 MB) |
+| **结构增强 LoRA** | `loras/NSFW_Qwen_TheseAlpacas_V2.safetensors` | **权重 0.55 ~ 0.8** | 人体结构、手部与质感细节增强 (~79.7 MB) |
+| **私处解剖副驾 LoRA** | `loras/qwen21_vagina_v1.safetensors` | **权重 0.65 ~ 0.7** | 女性私处解剖专攻、粘膜光泽与防抹平 (~79.7 MB) |
+| **真实黑丝质感 LoRA** | `loras/RealStockings_QWEN.safetensors` | **权重 0.65 ~ 0.7** | 真实黑丝/连裤袜网纹、微透肉与丝质反光 (~318.8 MB) |
+| **审美/画质增强 LoRA** | `loras/nicegirls_qwen12.safetensors` | **权重 0.50 ~ 0.6** | Cosplay摄影级画质、日系幼态面容与瓷肌通透感 (~79.7 MB) |
+| **姿势与构图 LoRA** | `loras/VNCCS_QI2_PoseStudioV1.1.safetensors` | **权重 0.50 ~ 0.7** | 3D 复杂动态姿势、多机位构图控制 (~159.4 MB) |
+| **二次元画风 LoRA** | `loras/Qwen2.1_Anime_consistency.safetensors` | **权重 0.60 ~ 0.8** | 二次元漫画赛璐珞风格一致性增强 (~159.4 MB) |
+| **男性生理修正 LoRA** | `loras/Q21 make the penis small.safetensors` | **权重 0.50 ~ 0.7** | 男性部位比例微调与生理修正 (~159.4 MB) |
 
 ##### 2. Anima AIO Yuri 引擎（SDXL 动漫专精）
 | 组件类型 | 文件名与存放路径 | 推荐参数 | 功能说明 |

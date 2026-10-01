@@ -33,12 +33,11 @@ def find_comfyui(custom_path=None):
         return os.path.abspath(custom_path)
 
     candidates = [
+        os.environ.get("COMFYUI_DIR", ""),
         os.path.join(REPO_ROOT, "ComfyUI"),
         os.path.join(REPO_ROOT, "..", "ComfyUI"),
         os.path.join(REPO_ROOT, "..", "QwenImage21", "ComfyUI"),
-        r"F:\AI\QwenImage21\ComfyUI",
-        r"F:\AI\ComfyUI\ComfyUI_windows_portable\ComfyUI",
-        r"C:\AI\ComfyUI",
+        os.path.join(REPO_ROOT, "..", "ComfyUI_windows_portable", "ComfyUI"),
     ]
     for c in candidates:
         if os.path.exists(c) and (os.path.exists(os.path.join(c, "main.py")) or os.path.exists(os.path.join(c, "custom_nodes"))):

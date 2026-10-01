@@ -10,6 +10,7 @@ One-click Launcher for Image Agent Studio & ComfyUI Server.
 
 import os
 import sys
+import json
 import time
 import socket
 import subprocess
@@ -20,9 +21,51 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
-PYTHON_EXE = r"F:\AI\ComfyUI\ComfyUI_windows_portable\python_embeded\python.exe"
-QWEN_DIR = r"F:\AI\QwenImage21"
-STUDIO_DIR = r"F:\AI\Image-Agent-Studio"
+STUDIO_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def load_launcher_config():
+    cfg_path = os.path.join(STUDIO_DIR, "config.json")
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+_cfg = load_launcher_config()
+
+def find_python():
+    candidates = [
+        os.environ.get("PYTHON_EXE"),
+        _cfg.get("python_exe"),
+        os.path.join(STUDIO_DIR, "..", "ComfyUI", "ComfyUI_windows_portable", "python_embeded", "python.exe"),
+        os.path.join(STUDIO_DIR, "..", "ComfyUI_windows_portable", "python_embeded", "python.exe"),
+        os.path.join(STUDIO_DIR, "..", "python_embeded", "python.exe"),
+        sys.executable
+    ]
+    for c in candidates:
+        if c and os.path.exists(c):
+            return os.path.abspath(c)
+    return sys.executable
+
+def find_comfy_or_qwen_dir():
+    candidates = [
+        os.environ.get("QWEN_DIR"),
+        os.environ.get("COMFYUI_DIR"),
+        _cfg.get("qwen_dir"),
+        _cfg.get("comfy_dir"),
+        os.path.join(STUDIO_DIR, "..", "QwenImage21"),
+        os.path.join(STUDIO_DIR, "..", "ComfyUI"),
+        os.path.join(STUDIO_DIR, "ComfyUI"),
+    ]
+    for c in candidates:
+        if c and os.path.exists(c):
+            return os.path.abspath(c)
+    return os.path.abspath(os.path.join(STUDIO_DIR, "..", "QwenImage21"))
+
+PYTHON_EXE = find_python()
+QWEN_DIR = find_comfy_or_qwen_dir()
 
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -55,15 +98,17 @@ def main():
 
     # 1. Start ComfyUI on port 8191 if not running
     if not is_port_in_use(8191):
-        print("  [1/2] 正在后台启动 ComfyUI 服务 (端口 8191)...")
+        extra_cfg = os.path.join(QWEN_DIR, "extra_model_paths.yaml")
+        comfy_script = "run_comfy.py" if os.path.exists(os.path.join(QWEN_DIR, "run_comfy.py")) else "main.py"
         comfy_cmd = [
             PYTHON_EXE,
-            "run_comfy.py",
+            comfy_script,
             "--port=8191",
             "--disable-auto-launch",
             "--preview-method", "none",
-            "--extra-model-paths-config", os.path.join(QWEN_DIR, "extra_model_paths.yaml")
         ]
+        if os.path.exists(extra_cfg):
+            comfy_cmd.extend(["--extra-model-paths-config", extra_cfg])
         env = os.environ.copy()
         env["PYTHONUTF8"] = "1"
         try:

@@ -66,7 +66,15 @@ python scripts/download_models.py --models-dir /path/to/ComfyUI/models
   - Diffusion: `qwen-image-2.1-Q4_K_M.gguf` (`city96/Qwen-Image-2.1-GGUF`)
   - Text Encoder: `qwen3vl_8b_int8_convrot.safetensors` (`Comfy-Org/Qwen-Image-2.1-GGUF`)
   - VAE: `qwen_image_2.1_vae_bf16.safetensors` (`Comfy-Org/Qwen-Image-2.1-GGUF`)
-- **Anima Yuri**:
+  - 可选 LoRA 军火库:
+    - `NSFW Qwen Lora.safetensors` (f23gg 旗舰生理结构与自然解剖)
+    - `NSFW_Qwen_TheseAlpacas_V2.safetensors` (基线结构与手部细节增强)
+    - `qwen21_vagina_v1.safetensors` (女性粘膜与私处解剖副驾)
+    - `RealStockings_QWEN.safetensors` (真实黑丝/连裤袜网纹与光泽)
+    - `nicegirls_qwen12.safetensors` (Cosplay摄影级美学、日系幼态面容与瓷肌)
+    - `VNCCS_QI2_PoseStudioV1.1.safetensors` (3D 多机位构图与姿态控制)
+    - `Qwen2.1_Anime_consistency.safetensors` (二次元漫画风格一致性)
+    - `Q21 make the penis small.safetensors` (男性生理比例修正)
   - Checkpoint: `miaomiaoHarem_animaBase.safetensors` 或 `Anima-2.9B-preview-v1.safetensors`
   - Core LoRAs: `RealSkin`, `aesthetic`, `detailer`, `Scenery_enchancer`, `darklight`, `colorfix`
 - **本地 Agent LLM**:

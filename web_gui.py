@@ -612,7 +612,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
     function isQwenLoraModel(name) {
       if (!name) return false;
       const low = name.toLowerCase();
-      const qwenTokens = ['qwen', 'qi2', 'q21', 'alpaca', 'these', 'realstockings', 'nicegirls', 'penis', 'vagina'];
+      const qwenTokens = ['qwen', 'qi2', 'q21', 'alpaca', 'these', 'realstockings', 'nicegirls', 'penis', 'vagina', 'f23gg', 'posestudio', 'vnccs'];
       return qwenTokens.some(token => low.includes(token));
     }
 
@@ -823,7 +823,31 @@ HTML_CONTENT = r"""<!DOCTYPE html>
       sel.onchange = function() {
         const val = (sel.value || '').toLowerCase();
         if (wf === 'qwen') {
-          if (val.includes('alpaca') || val.includes('these') || val.includes('nsfw') || val.includes('vagina')) {
+          if (val.includes('nsfw qwen lora') || val.includes('f23gg')) {
+            slider.value = 0.65;
+            num.value = '0.65';
+            const cfgInput = document.getElementById('pCFG');
+            if (cfgInput && (parseFloat(cfgInput.value) <= 1.0 || parseFloat(cfgInput.value) > 3.2)) {
+              cfgInput.value = '2.8';
+            }
+            const negBox = document.getElementById('pNegPrompt');
+            if (negBox && !negBox.value.includes('smooth crotch')) {
+              negBox.value = "smooth crotch, featureless crotch, barbie doll crotch, flat crotch, missing genitalia, erased genitalia, blurry crotch, twisted anatomy, sideways genitals, inverted anatomy, upside down genitals, deformed crotch, fused buttocks, extra limbs, underwear covering, bar censor, mosaic censor, lowres";
+            }
+            appendLog('🎯 [Sweet-Spot] 检测到挂载 f23gg 旗舰 NSFW LoRA，已自动匹配推荐参数：权重 0.65 | CFG 2.8 | 防抹平负向提示词');
+          } else if (val.includes('vagina')) {
+            slider.value = 0.65;
+            num.value = '0.65';
+            const cfgInput = document.getElementById('pCFG');
+            if (cfgInput && (parseFloat(cfgInput.value) <= 1.0 || parseFloat(cfgInput.value) > 3.2)) {
+              cfgInput.value = '2.8';
+            }
+            const negBox = document.getElementById('pNegPrompt');
+            if (negBox && !negBox.value.includes('smooth crotch')) {
+              negBox.value = "smooth crotch, featureless crotch, barbie doll crotch, flat crotch, missing genitalia, erased genitalia, blurry crotch, twisted anatomy, sideways genitals, inverted anatomy, upside down genitals, deformed crotch, fused buttocks, extra limbs, underwear covering, bar censor, mosaic censor, lowres";
+            }
+            appendLog('🎯 [Sweet-Spot] 检测到挂载解剖优化 LoRA，已自动匹配推荐参数：权重 0.65 | CFG 2.8 | 防抹平负向提示词');
+          } else if (val.includes('alpaca') || val.includes('these') || val.includes('nsfw')) {
             slider.value = 0.55;
             num.value = '0.55';
             const cfgInput = document.getElementById('pCFG');
@@ -831,18 +855,18 @@ HTML_CONTENT = r"""<!DOCTYPE html>
               cfgInput.value = '2.8';
             }
             const negBox = document.getElementById('pNegPrompt');
-            if (negBox && !negBox.value.includes('fused buttocks')) {
-              negBox.value = "fused buttocks, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, inverted anatomy, upside down anatomy, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres";
+            if (negBox && !negBox.value.includes('smooth crotch')) {
+              negBox.value = "smooth crotch, featureless crotch, barbie doll crotch, flat crotch, missing genitalia, erased genitalia, blurry crotch, twisted anatomy, sideways genitals, inverted anatomy, upside down genitals, deformed crotch, fused buttocks, extra limbs, underwear covering, bar censor, mosaic censor, lowres";
             }
-            appendLog('🎯 [Sweet-Spot] 检测到挂载解剖优化 LoRA，已自动匹配黄金推荐参数：权重 0.55 | CFG 2.8 | 抗畸变负向提示词');
+            appendLog('🎯 [Sweet-Spot] 检测到挂载 TheseAlpacas LoRA，已自动匹配推荐参数：权重 0.55 | CFG 2.8');
           } else if (val.includes('realstockings')) {
-            slider.value = 0.70;
-            num.value = '0.70';
-            appendLog('🧦 [LoRA] 检测到挂载真实丝袜质感 LoRA，已设推荐权重 0.70');
+            slider.value = 0.65;
+            num.value = '0.65';
+            appendLog('🧦 [LoRA] 检测到挂载真实丝袜质感 LoRA，已设推荐权重 0.65');
           } else if (val.includes('nicegirls')) {
-            slider.value = 0.60;
-            num.value = '0.60';
-            appendLog('✨ [LoRA] 检测到挂载审美画质增强 LoRA，已设推荐权重 0.60');
+            slider.value = 0.55;
+            num.value = '0.55';
+            appendLog('✨ [LoRA] 检测到挂载审美画质增强 LoRA，已设推荐权重 0.55');
           } else if (val.includes('posestudio') || val.includes('qi2')) {
             slider.value = 0.60;
             num.value = '0.60';
@@ -1198,20 +1222,43 @@ def get_available_loras():
         pass
 
     found = set()
+    cfg = image_agent_bridge.get_config()
     possible_dirs = [
-        r"F:\AI\QwenImage21\models\loras",
-        r"F:\AI\ComfyUI\ComfyUI_windows_portable\ComfyUI\models\loras",
-        os.path.join(SCRIPT_DIR, "ComfyUI", "models", "loras")
+        cfg.get("comfy_loras_dir", ""),
+        os.environ.get("COMFYUI_LORAS_DIR", ""),
+        os.path.join(SCRIPT_DIR, "models", "loras"),
+        os.path.join(SCRIPT_DIR, "ComfyUI", "models", "loras"),
+        os.path.join(os.path.dirname(SCRIPT_DIR), "QwenImage21", "models", "loras"),
+        os.path.join(os.path.dirname(SCRIPT_DIR), "ComfyUI", "ComfyUI_windows_portable", "ComfyUI", "models", "loras"),
     ]
     for d in possible_dirs:
-        if os.path.exists(d):
+        if d and os.path.exists(d):
             for root, _, files in os.walk(d):
                 for f in files:
                     if f.lower().endswith(('.safetensors', '.ckpt', '.pt')):
                         rel = os.path.relpath(os.path.join(root, f), d).replace('\\', '/')
                         found.add(rel)
                         found.add(f)
-    return sorted(list(found))
+    if found:
+        return sorted(list(found))
+
+    # Comprehensive fallback catalog of all known supported LoRAs
+    return [
+        "NSFW Qwen Lora.safetensors",
+        "NSFW_Qwen_TheseAlpacas_V2.safetensors",
+        "qwen21_vagina_v1.safetensors",
+        "RealStockings_QWEN.safetensors",
+        "nicegirls_qwen12.safetensors",
+        "VNCCS_QI2_PoseStudioV1.1.safetensors",
+        "Qwen2.1_Anime_consistency.safetensors",
+        "Q21 make the penis small.safetensors",
+        "Scenery_enchancer-Anima-P3.safetensors",
+        "bakaE79AAEE882A4.Md2S.safetensors",
+        "Anima-写实光.safetensors",
+        "anima_context_detailer_base10.safetensors",
+        "anima-highres-aesthetic-boost.safetensors",
+        "Anima_colorfix_v1_by_Volnovik.safetensors"
+    ]
 
 def get_status_for_workflow(wf="qwen", has_image=None):
     cfg = image_agent_bridge.get_config()

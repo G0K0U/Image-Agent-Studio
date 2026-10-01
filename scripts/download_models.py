@@ -41,15 +41,71 @@ MODELS_MANIFEST = {
         ]
     },
     "qwen_loras": {
-        "description": "Qwen-Image 2.1 Anatomy & Structure Enhancer LoRA",
+        "description": "Qwen-Image 2.1 Supported LoRA Catalog",
         "files": [
             {
-                "name": "Qwen_TheseAlpacas_V2.safetensors",
+                "name": "NSFW Qwen Lora.safetensors",
+                "subfolder": "loras",
+                "size": "~159.4 MB",
+                "role": "Flagship intimate concept & anatomical realism (0.65 weight, er_sde + beta)",
+                "source": "HuggingFace: f23gg/NSFW-LORA-Qwen-Image-2.1",
+                "note": "Rank 32 flagship model with high anatomical fidelity"
+            },
+            {
+                "name": "NSFW_Qwen_TheseAlpacas_V2.safetensors",
                 "subfolder": "loras",
                 "size": "~79.7 MB",
-                "role": "Anatomy, hands and structural detail enhancer (0.8 weight, er_sde + beta)",
-                "source": "CivArchive / HuggingFace: TheseAlpacas Qwen2.1 LoRA V2",
-                "note": "Recommended settings: er_sde sampler, beta scheduler, steps 40, CFG 1.0, strength 0.8"
+                "role": "Anatomy, hands & structural detail enhancer (0.55-0.8 weight, er_sde + beta)",
+                "source": "Civitai / HuggingFace: TheseAlpacas Qwen2.1 LoRA V2",
+                "note": "Community benchmark model"
+            },
+            {
+                "name": "qwen21_vagina_v1.safetensors",
+                "subfolder": "loras",
+                "size": "~79.7 MB",
+                "role": "Specialized female intimate anatomy co-pilot (0.65-0.7 weight)",
+                "source": "Civitai / HuggingFace mirror",
+                "note": "Focuses on delicate mucosal structures and anti-smoothing"
+            },
+            {
+                "name": "RealStockings_QWEN.safetensors",
+                "subfolder": "loras",
+                "size": "~318.8 MB",
+                "role": "Photorealistic sheer black stockings & pantyhose texture (0.65-0.7 weight)",
+                "source": "Civitai: RealStockings Qwen",
+                "note": "Renders authentic fabric mesh, tension, and silk sheen"
+            },
+            {
+                "name": "nicegirls_qwen12.safetensors",
+                "subfolder": "loras",
+                "size": "~79.7 MB",
+                "role": "Aesthetic, facial youthfulness & porcelain skin enhancement (0.5-0.6 weight)",
+                "source": "Civitai: nicegirls Qwen",
+                "note": "Cosplay and portrait photography enhancer"
+            },
+            {
+                "name": "VNCCS_QI2_PoseStudioV1.1.safetensors",
+                "subfolder": "loras",
+                "size": "~159.4 MB",
+                "role": "3D camera angle, pose & composition controller (0.5-0.7 weight)",
+                "source": "Civitai: PoseStudio V1.1",
+                "note": "Controls complex body postures and viewpoints"
+            },
+            {
+                "name": "Qwen2.1_Anime_consistency.safetensors",
+                "subfolder": "loras",
+                "size": "~159.4 MB",
+                "role": "2D Anime & cel-shading style consistency (0.6-0.8 weight)",
+                "source": "Civitai: Qwen2.1 Anime Consistency",
+                "note": "Preserves 2D aesthetic when desired"
+            },
+            {
+                "name": "Q21 make the penis small.safetensors",
+                "subfolder": "loras",
+                "size": "~159.4 MB",
+                "role": "Male anatomical proportion refinement (0.5-0.7 weight)",
+                "source": "Civitai / HuggingFace mirror",
+                "note": "Anatomical scaling and correction"
             }
         ]
     },
