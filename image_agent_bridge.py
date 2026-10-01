@@ -291,10 +291,10 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             "【AUTONOMOUS LORA DISPATCH MATRIX (灵活自主决策何时使用/使用哪些 LoRA)】:\n"
             "You must carefully read the user's intent and visually inspect the image to decide whether ANY LoRA is needed at all, and which specific LoRA(s) to dispatch:\n"
             "0. NO LoRA / Pure Qwen Native ('loras': [], 'cfg': 1.0):\n"
-            "   - When the user asks for standard edits (e.g. changing background, clothes color, lighting, weather, general objects, character expression, regular touch-ups) without special erotic anatomy, extreme anime styling, or black stockings.\n"
+            "   - When the user asks for standard edits: changing background, hair color, clothing style, shoes, gloves, accessories, lighting, weather, general objects, character expression, regular touch-ups, or removing non-intimate outer garments (jackets, gloves, scarves, boots).\n"
             "   - In this case, do NOT load any LoRA! Set 'loras': [], 'cfg': 1.0, and 'negative_prompt': '' for cleanest, purest Qwen DiT fidelity.\n"
             "1. 'NSFW_Qwen_TheseAlpacas_V2.safetensors' (Strength: 0.55) / 'NSFW Qwen Lora.safetensors' (Strength: 0.60):\n"
-            "   - Specialized NSFW concept models for Qwen 2.1. Use ONLY when user explicitly asks for intimate exposure, underwear removal, genital/buttock anatomy, or erotic rendering. When active, set 'cfg': 2.5 - 2.8, 'steps': 35 - 40, sampler 'er_sde', scheduler 'beta'.\n"
+            "   - Specialized NSFW concept models for Qwen 2.1. Use STRICTLY ONLY when the user explicitly requests intimate private exposure, underwear/bra/panties removal, or genital/buttock nudity. NEVER dispatch NSFW LoRA for removing gloves, shoes, hats, coats, or ordinary non-intimate garments! When active, set 'cfg': 2.6 - 2.8, 'steps': 35 - 40, sampler 'er_sde', scheduler 'beta'.\n"
             "2. 'qwen21_vagina_v1.safetensors' (Strength: 0.65):\n"
             "   - Specialized female anatomical fidelity and mucosal micro-details.\n"
             "3. 'RealStockings_QWEN.safetensors' (Strength: 0.70):\n"
@@ -307,22 +307,24 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             "   - Use when user asks for pure 2D anime style, cel-shading, or manga aesthetic. Set 'cfg': 2.0.\n"
             "7. Intelligent LoRA Combinations:\n"
             "   - Combine 2 to 3 LoRAs ONLY when multiple relevant concepts co-occur (e.g. stockings + anatomy, or anime + aesthetic). Do NOT indiscriminately add unrequested LoRAs.\n\n"
-            "【精细化解剖结构保真与 3D 空间防颠倒法则 (CRITICAL SPATIAL CORRECTION & ANATOMY RETENTION)】:\n"
-            "When the user gives natural language instructions to remove underwear, coverings, accessories, pearl beads, or tape (e.g. '把遮盖阴部和屁穴的珍珠内裤去掉 其他保持不变', '脱去衣服/内裤', '去除私处遮挡物'):\n"
-            "1. 视觉先验甄别（严禁将已有解剖结构误判为内裤抹杀）：\n"
-            "   - 必须通过视觉模型仔细审视参考图：原图中的解剖结构（如小阴唇、臀缝、肉褶）往往已经被画出并裸露在缝隙中，遮挡物通常仅仅是'珍珠吊坠链'、'贴纸/胶带'或'微型装饰'！\n"
-            "   - 【绝对严禁】使用 'remove underwear covering the genital area and reveal exposed anatomy beneath' 或类似词句！因为'covering'会误导下游扩散模型将原图已画好的小阴唇判定为'衣服布料'并彻底刷平抹杀，进而从零脑补导致融合或畸变！\n"
-            "   - 【必须使用的规范指令格式】：\n"
-            "     * 精确指明移除目标：'In-place photo manipulation of <image1>: remove only the string of pearl beads hanging in the cleft and the two small pink adhesive tape patches (one at upper cleft, one at lower end).'\n"
-            "     * 严正声明保留已有结构：'Do NOT regenerate or smooth over the crotch or cleft. Preserve and retain the existing pink mucosal labia already visible in the lower cleft between the thighs, keeping the cleft naturally open between the labia.'\n"
-            "     * 全局保真声明：'Keep the rest of the image, the buttocks, lighting, and skin texture 100% identical.'\n"
-            "2. 3D 空间坐标绝对锚定（严防上下倒置）：\n"
-            "   - 在特殊趴姿/翘臀俯视（butt-up / doggystyle / inverted prone）视角下，身体坐标与画面上下轴完全相反！\n"
-            "   - 必须使用绝对身体解剖学路标（Landmarks）进行锚定，禁止使用容易混淆的抽象上下描述：\n"
-            "     * 臀缝上方（靠近尾椎/远离床单）：'In the upper cleft where the top tape was removed near the tailbone, reveal a neat, small, smooth closed anal sphincter.'\n"
-            "     * 臀缝下方（靠近双腿前方/乳房/床单）：'In the lower cleft towards the breasts and bed sheets, preserve and refine the existing pink mucosal labia, keeping the cleft naturally separated.'\n"
-            "3. 负向提示词强力拦截：\n"
-            "   - 在 'negative_prompt' 字段中，必须包含防颠倒与防粘连词：'inverted anatomy, upside down genitals, labia at top, vaginal opening at top, fused buttocks, merged cleft, sealed cleft, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, pearl beads, pink tape, bar censor, mosaic censor, lowres'.\n\n"
+            "【动态解剖结构与 3D 空间方位法则 (DYNAMIC VISUAL PERCEPTION & ANATOMICAL EDITING PROTOCOL)】:\n"
+            "When the user requests clothing removal, lingerie edits, or revealing anatomy:\n"
+            "1. 姿态与空间方位动态感知 (严禁生搬硬套预设方位与案例):\n"
+            "   - 必须通过视觉模型仔细审视 <image1> 中人物的实际 3D 姿态与镜头视角：\n"
+            "     * 仰卧 / 正面开腿 (Supine / Frontal / Legs Spread): 人物仰卧或正面朝向镜头，双腿分开。阴部、小阴唇及阴道口位于双腿内侧中心区域；肛门位于下方/后方靠近会阴处（绝不在上方或胸口方向！）。\n"
+            "     * 俯卧 / 翘臀 / 背向 (Prone / Doggystyle / Butt-up): 人物臀部正对镜头。肛门位于臀缝上方靠近尾椎处；小阴唇及阴部位于臀缝下方靠近前方。\n"
+            "     * 站姿 / 坐姿 / 侧卧: 严格按照图片中人物实际呈现的骨盆角度与解剖学朝向描述方位。\n"
+            "2. 精确识别实际衣物与遮挡物 (严禁无中生有):\n"
+            "   - 仔细观察 <image1> 中人物实际穿着的衣物（例如：垂至双腿间的深灰布料/围布、高衩连体衣、蕾丝内裤、比基尼、紧身短裤等），只针对用户要求修改的实际物件进行修改或移除，绝不凭空捏造不存在的珍珠链或贴纸。\n"
+            "   - 如果原图在衣物边缘已经隐约画出肉褶、小阴唇或臀缝轮廓，务必指示扩散模型保留这些已有的人体轮廓并自然过渡，切勿大面积抹平重画。\n"
+            "3. 绝对保持未修改区域 100% 原始质感与特征:\n"
+            "   - 指令中明确声明保持角色的五官面貌、发型发色、未指定修改的衣物部分、光影色调及背景 100% 完全一致。\n"
+            "4. 动态提示词生成守则 (严禁模板死记硬背):\n"
+            "   - 必须根据当前用户输入的自然语言和 <image1> 画面视觉事实，独立组织一段流畅连贯的纯英文修改提示词段落。\n"
+            "   - 严禁死记硬背或机械重复固定模板句子！\n"
+            "5. 负向提示词针对性拦截:\n"
+            "   - 仅在启用私处解剖 LoRA 时加入防颠倒与防畸变词：'inverted anatomy, upside down genitals, deformed crotch, fused buttocks, merged cleft, sealed cleft, giant oversized genitalia, exaggerated wrinkled skin, gaping orifice, mutated anatomy, extra limbs, underwear covering, bar censor, mosaic censor, lowres'。\n"
+            "   - 若用户仅修改发色、表情、常规衣服或背景，保持负向提示词清爽简约，绝不混入私处关键词。\n\n"
             "【OUTPUT FORMAT REQUIREMENT (API / Pipeline Mode)】:\n"
             "You MUST output ONLY a valid JSON markdown codeblock conforming to this schema:\n"
             "```json\n"
@@ -404,8 +406,11 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             {"role": "system", "content": sys_prompt},
             {"role": "user", "content": user_content}
         ],
-        "temperature": 0.2,
-        "max_tokens": 1024
+        "temperature": 0.35,
+        "max_tokens": 2048,
+        "presence_penalty": 0.4,
+        "frequency_penalty": 0.4,
+        "repeat_penalty": 1.15
     }
 
     req = urllib.request.Request(
@@ -424,21 +429,42 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
     elif "```" in json_text:
         json_text = json_text.split("```", 1)[1].split("```", 1)[0].strip()
 
+    # Locate outermost JSON brackets to strip any conversational prefix/suffix
+    start_brace = json_text.find("{")
+    end_brace = json_text.rfind("}")
+    if start_brace != -1 and end_brace != -1 and end_brace > start_brace:
+        json_text = json_text[start_brace:end_brace + 1]
+
     try:
-        res_obj = json.loads(json_text)
+        res_obj = json.loads(json_text, strict=False)
     except Exception as je:
-        print(f"[Bridge] Warning: JSON decode failed ({je}), attempting repair on:\n{json_text}")
-        if not json_text.endswith("}"):
-            last_comma = json_text.rfind(",")
+        print(f"[Bridge] Warning: JSON decode failed ({je}), attempting repair on:\n{json_text[:200]}...")
+        repaired = json_text
+        if not repaired.endswith("}"):
+            last_comma = repaired.rfind(",")
             if last_comma != -1:
-                try:
-                    res_obj = json.loads(json_text[:last_comma] + "\n}")
-                except Exception:
-                    raise je
+                repaired = repaired[:last_comma] + "\n}"
+            else:
+                repaired = repaired + '"\n}'
+        try:
+            res_obj = json.loads(repaired, strict=False)
+        except Exception:
+            # Fallback regex extraction of rewritten_prompt if JSON is cut off
+            import re
+            pm = re.search(r'"(?:rewritten_prompt|prompt)"\s*:\s*"([^"]+)"', json_text)
+            if pm:
+                res_obj = {
+                    "rewritten_prompt": pm.group(1),
+                    "wh_ratio": "",
+                    "ratio_follow": "<image1>",
+                    "steps": 40,
+                    "cfg": 2.8,
+                    "seed": -1,
+                    "loras": [],
+                    "negative_prompt": ""
+                }
             else:
                 raise je
-        else:
-            raise je
 
     # Normalize LoRAs structure
     if "loras" in res_obj:

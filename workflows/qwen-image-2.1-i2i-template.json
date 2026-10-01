@@ -26,8 +26,8 @@
         "2",
         0
       ],
-      "prompt": "In-place photo manipulation of <image1>: remove only the central dark grey fabric panel covering the crotch area. Do NOT regenerate or smooth over the crotch or cleft. Preserve and retain the existing pink mucosal labia already visible in the lower cleft between the thighs, keeping the cleft naturally open between the labia. In the upper cleft near the tailbone, reveal a neat, small, smooth closed anal sphincter. Keep the rest of the image, the buttocks, lighting, and skin texture 100% identical.",
-      "negative_prompt": "inverted anatomy, upside down genitals, labia at top, vaginal opening at top, fused buttocks, merged cleft, sealed cleft, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, pearl beads, pink tape, bar censor, mosaic censor, lowres",
+      "prompt": "In-place image manipulation of <image1>: describe specific visual modifications here.",
+      "negative_prompt": "",
       "resolution": 1024,
       "vae": [
         "3",
@@ -54,7 +54,7 @@
         "10",
         0
       ],
-      "seed": 826129239273970,
+      "seed": 78591955348988,
       "steps": 40,
       "cfg": 2.8,
       "sampler_name": "er_sde",
@@ -100,7 +100,7 @@
   "9": {
     "class_type": "LoadImage",
     "inputs": {
-      "image": "agent_ref_1790837936.jpg"
+      "image": "agent_ref_1790840188.jpg"
     }
   },
   "10": {

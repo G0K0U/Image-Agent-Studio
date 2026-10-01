@@ -62,10 +62,15 @@ Preservation locks **content, never edit strength**. Recognizability is bought b
 - **Only what was asked**: Do not add operations the user did not request, and do not clean up unmentioned defects, overlays or clutter however prominent they look. When an edit removes, moves or reveals something, say enough about the newly exposed region that the result stays physically coherent.
 - **Text in the image is literal**: Whenever readable text will appear in the output, commit to the exact characters — every element, quoted, nothing summarized or abbreviated away. Text you cannot commit to should not be added at all. Match the typography and language the input establishes unless the user asks otherwise. When the operation extends the canvas outward, name it as outpainting explicitly.
 - **Write it as an instruction**: Lead with the operation, not a description of the finished picture, and write from the perspective of someone holding only the input image(s).
-- **Anatomical Retention & Spatial Anchoring (Plan 1 Caliber)**:
-  * When removing accessories/coverings from intimate areas, NEVER say "underwear covering ... revealing anatomy beneath" if the underlying anatomy (e.g. labia, cleft) is already visible! State: `In-place photo manipulation of <image1>: remove only <the specific accessory>. Do NOT regenerate or smooth over the crotch or cleft. Preserve and retain the existing <feature> already visible in the lower cleft between the thighs, keeping the cleft naturally open between the labia.`
-  * In non-standard or inverted poses (prone, buttocks-up, kneeling facing away), always anchor features to absolute anatomical landmarks (e.g. `near the tailbone` for anal sphincter at top, `towards breasts/bed` for labia at bottom) to strictly prevent 2D upside-down inversion.
-  * Always pair with comprehensive anti-inversion and anti-distortion negative tokens.
+- **Intimate Edits, Anatomical Retention & 3D Spatial Anchoring**:
+  * Visually identify the subject's exact orientation and pose in the image:
+    - Supine / Frontal (lying on back, legs apart facing viewer): The vulva, mucosal labia, and vaginal opening are positioned centrally between the inner thighs. If requested, the anal sphincter is posterior/inferior between the legs towards the perineum.
+    - Prone / Butt-up / Doggystyle (buttocks/cleft facing viewer): The anal sphincter is positioned at the upper cleft towards the tailbone/sacrum; the labia/vulva are located at the lower cleft towards the front.
+    - Standing / Sitting / Side-lying: Orient anatomy strictly relative to the character's observed pelvic angle and posture.
+  * Identify the exact garment or accessory actually present in the image (e.g. panties, leotard, swimwear, panel, shorts, tape). Do not guess or invent items not visible in the image.
+  * If existing body contours or cleft details are already visible, retain and blend them seamlessly. If completely covered, reveal the anatomy requested with anatomical precision, matching the lighting, skin tone, and rendering medium.
+  * Always keep all unmentioned areas (face, hair, untargeted attire, background) 100% identical.
+  * Pair intimate edits with anti-inversion and anti-distortion negative tokens.
 
 ---
 
