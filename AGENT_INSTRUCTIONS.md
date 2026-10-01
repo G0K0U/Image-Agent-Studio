@@ -50,6 +50,8 @@ python scripts/download_models.py --models-dir <path_to_comfyui/models>
      - Download: `huggingface-cli download Comfy-Org/Qwen-Image-2.1-GGUF split_files/text_encoders/qwen3vl_8b_int8_convrot.safetensors --local-dir <comfy_dir>/models/text_encoders`
    - `vae/qwen_image_2.1_vae_bf16.safetensors`
      - Download: `huggingface-cli download Comfy-Org/Qwen-Image-2.1-GGUF split_files/vae/qwen_image_2.1_vae_bf16.safetensors --local-dir <comfy_dir>/models/vae`
+   - `loras/Qwen_TheseAlpacas_V2.safetensors` (Anatomy & Structural Detail Enhancer, recommended strength 0.8 with `er_sde` + `beta`)
+     - Download: Place into `<comfy_dir>/models/loras/Qwen_TheseAlpacas_V2.safetensors` (from CivArchive / HuggingFace mirror)
 
 2. **Anima AIO Yuri Engine**:
    - `diffusion_models/Anima/miaomiaoHarem_animaBase.safetensors` (or `Anima-2.9B-preview-v1.safetensors`)

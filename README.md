@@ -72,6 +72,7 @@ The script will output exact `huggingface-cli` download commands for any missing
   - Diffusion UNet: `qwen-image-2.1-Q4_K_M.gguf` (`city96/Qwen-Image-2.1-GGUF`)
   - Text Encoder: `qwen3vl_8b_int8_convrot.safetensors` (`Comfy-Org/Qwen-Image-2.1-GGUF`)
   - VAE: `qwen_image_2.1_vae_bf16.safetensors` (`Comfy-Org/Qwen-Image-2.1-GGUF`)
+  - Recommended LoRA: `Qwen_TheseAlpacas_V2.safetensors` (Anatomy & structure enhancer, 0.8 weight, er_sde + beta)
 - **Anima Yuri Engine**:
   - Checkpoint: `miaomiaoHarem_animaBase.safetensors` or `Anima-2.9B-preview-v1.safetensors`
   - Text Encoder: `qwen_3_06b_base.safetensors`

@@ -1,5 +1,5 @@
 {
-  "last_link_id": 248,
+  "last_link_id": 249,
   "nodes": [
     {
       "outputs": [
@@ -597,8 +597,8 @@
         "randomize",
         40,
         1,
-        "euler",
-        "simple",
+        "er_sde",
+        "beta",
         1
       ],
       "inputs": [
@@ -7018,7 +7018,7 @@
       "inputs": [
         {
           "name": "model",
-          "link": 52,
+          "link": 249,
           "label": "model",
           "type": "MODEL",
           "localized_name": "model"
@@ -11614,6 +11614,70 @@
         "toggleRestriction": "default"
       },
       "order": 68
+    },
+    {
+      "id": 201,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        1650.0,
+        1750.0
+      ],
+      "size": [
+        320.0,
+        82.0
+      ],
+      "flags": {},
+      "order": 57,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 52
+        },
+        {
+          "name": "lora_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "lora_name"
+          }
+        },
+        {
+          "name": "strength_model",
+          "type": "FLOAT",
+          "widget": {
+            "name": "strength_model"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            249
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly",
+        "cnr_id": "comfy-core",
+        "ver": "0.36.0",
+        "widget_ue_connectable": {
+          "lora_name": true,
+          "strength_model": true
+        }
+      },
+      "widgets_values": [
+        "Qwen_TheseAlpacas_V2.safetensors",
+        0.8
+      ],
+      "widgets_values_named": {
+        "lora_name": "Qwen_TheseAlpacas_V2.safetensors",
+        "strength_model": 0.8
+      },
+      "color": "#323",
+      "bgcolor": "#535"
     }
   ],
   "extra": {
@@ -12202,7 +12266,7 @@
       52,
       48,
       0,
-      52,
+      201,
       0,
       "MODEL"
     ],
@@ -13253,11 +13317,19 @@
       198,
       0,
       "IMAGE"
+    ],
+    [
+      249,
+      201,
+      0,
+      52,
+      0,
+      "MODEL"
     ]
   ],
   "id": "6971db49-e3a4-4967-81cf-a6c5ace38537",
   "config": {},
   "version": 0.4,
-  "last_node_id": 200,
+  "last_node_id": 201,
   "revision": 0
 }

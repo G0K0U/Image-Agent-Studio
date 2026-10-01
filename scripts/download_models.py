@@ -40,6 +40,19 @@ MODELS_MANIFEST = {
             }
         ]
     },
+    "qwen_loras": {
+        "description": "Qwen-Image 2.1 Anatomy & Structure Enhancer LoRA",
+        "files": [
+            {
+                "name": "Qwen_TheseAlpacas_V2.safetensors",
+                "subfolder": "loras",
+                "size": "~79.7 MB",
+                "role": "Anatomy, hands and structural detail enhancer (0.8 weight, er_sde + beta)",
+                "source": "CivArchive / HuggingFace: TheseAlpacas Qwen2.1 LoRA V2",
+                "note": "Recommended settings: er_sde sampler, beta scheduler, steps 40, CFG 1.0, strength 0.8"
+            }
+        ]
+    },
     "anima_aio": {
         "description": "Anima AIO Yuri SDXL Base Checkpoint & Encoders",
         "files": [
