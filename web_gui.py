@@ -50,12 +50,13 @@ HTML_CONTENT = """<!DOCTYPE html>
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background-color: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; padding: 20px; }
-    .container { max-width: 1440px; margin: 0 auto; display: grid; grid-template-columns: 520px 1fr; gap: 20px; }
-    header { grid-column: 1 / -1; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .container { max-width: 1600px; margin: 0 auto; display: grid; grid-template-columns: 560px 1fr; gap: 24px; align-items: start; }
+    header { grid-column: 1 / -1; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
     h1 { font-size: 22px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; }
     .badges { display: flex; gap: 8px; }
     .badge { font-size: 12px; background: #6366f122; color: #a5b4fc; border: 1px solid #6366f144; padding: 3px 10px; border-radius: 999px; }
     .badge-vram { background: #10b98122; color: #34d399; border-color: #10b98144; }
+    .sidebar { display: flex; flex-direction: column; gap: 0; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
     .card-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #f8fafc; display: flex; justify-content: space-between; align-items: center; }
     textarea, input, select { width: 100%; background: #0b0d13; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 10px; font-size: 13px; margin-bottom: 10px; font-family: inherit; }
@@ -69,8 +70,9 @@ HTML_CONTENT = """<!DOCTYPE html>
     .param-item label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
     .param-item input, .param-item select { margin-bottom: 0; }
     .status-box { background: #0b0d13; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; max-height: 220px; overflow-y: auto; color: #cbd5e1; }
-    .preview-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 620px; background: #0b0d13; border: 2px dashed var(--border); border-radius: 12px; overflow: hidden; position: relative; padding: 12px; }
-    .preview-img { max-width: 100%; max-height: 780px; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); cursor: pointer; }
+    .preview-area { position: sticky; top: 20px; }
+    .preview-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 720px; background: #0b0d13; border: 2px dashed var(--border); border-radius: 12px; overflow: hidden; position: relative; padding: 16px; }
+    .preview-img { max-width: 100%; max-height: 820px; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); cursor: pointer; }
     .placeholder { color: var(--muted); text-align: center; }
     .spinner { border: 4px solid #232838; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 16px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -177,21 +179,22 @@ HTML_CONTENT = """<!DOCTYPE html>
         </div>
 
         <div id="multiLoraSection" style="margin-top: 12px; padding: 12px; background: rgba(99, 102, 241, 0.06); border: 1px solid rgba(99, 102, 241, 0.22); border-radius: 8px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <span style="font-size: 12px; font-weight: 600; color: #a5b4fc; letter-spacing: 0.3px;">🧬 Multi-LoRA Stack / 多 LoRA 堆叠管理</span>
               <span id="loraCountBadge" class="badge" style="font-size: 10px; padding: 1px 7px;">0 Active</span>
-            <div style="display: flex; gap: 6px;">
-              <button type="button" onclick="loadSweetSpotPreset()" style="width: auto; padding: 4px 10px; font-size: 11px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 4px; display: flex; align-items: center; gap: 4px; cursor: pointer;" title="一键载入实测验证的黄金甜点参数（LoRA 0.55、CFG 2.8、er_sde/beta 及专属抗畸变负向提示词）">
+            </div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <button type="button" onclick="loadSweetSpotPreset()" style="width: auto; padding: 5px 10px; font-size: 11px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 4px; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;" title="一键载入实测验证的黄金甜点参数（LoRA 0.55、CFG 2.8、er_sde/beta 及专属抗畸变负向提示词）">
                 <span>🎯 载入实测甜点推荐</span>
               </button>
-              <button type="button" onclick="addLoraRow()" style="width: auto; padding: 4px 10px; font-size: 11px; background: #4f46e5; border-radius: 4px; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <button type="button" onclick="addLoraRow()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #4f46e5; border-radius: 4px; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;">
                 <span>➕ 添加 LoRA</span>
               </button>
             </div>
           </div>
           
-          <div id="loraStackList" style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; padding-right: 2px;">
+          <div id="loraStackList" style="display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; padding-right: 2px;">
             <!-- Dynamic LoRA rows -->
           </div>
           
@@ -216,7 +219,10 @@ HTML_CONTENT = """<!DOCTYPE html>
       <div class="card" style="height: 100%; display: flex; flex-direction: column;">
         <div class="card-title">
           <span>🖼️ Generation Preview / 成图预览</span>
-          <span id="genInfo" style="font-size: 12px; color: var(--muted);">Waiting / 等待渲染</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="genInfo" style="font-size: 12px; color: var(--muted);">Waiting / 等待渲染</span>
+            <button id="btnOpenNewTab" type="button" style="width: auto; padding: 4px 10px; font-size: 11px; background: #1e293b; border: 1px solid var(--border); border-radius: 4px; display: none; cursor: pointer;" onclick="openPreviewInNewTab()">🔍 新窗口查看</button>
+          </div>
         </div>
         <div class="preview-container">
           <div id="placeholderText" class="placeholder">
@@ -737,6 +743,8 @@ HTML_CONTENT = """<!DOCTYPE html>
           img.src = data.latest_image + '?t=' + Date.now();
           img.style.display = 'block';
           placeholder.style.display = 'none';
+          const btnTab = document.getElementById('btnOpenNewTab');
+          if (btnTab) btnTab.style.display = 'inline-block';
           appendLog('已加载最近生成的渲染图片。');
         }
         appendLog('已同步读取 [' + (wf === 'qwen' ? 'Qwen-Image 2.1' : 'Anima Yuri') + '] 当前工作流配置。');
@@ -849,6 +857,8 @@ HTML_CONTENT = """<!DOCTYPE html>
           img.src = data.image_url + '?t=' + Date.now();
           img.style.display = 'block';
           placeholder.style.display = 'none';
+          const btnTab = document.getElementById('btnOpenNewTab');
+          if (btnTab) btnTab.style.display = 'inline-block';
           genInfo.innerText = `引擎: ${wf.toUpperCase()} | 耗时: ${duration}s | 种子: ${data.seed || '随机'}`;
           appendLog(`🎉 图像生成成功！渲染耗时: ${duration}秒`);
           showNotification('Image Agent Studio', `🎨 图像渲染完成！生成耗时: ${duration}秒`);
@@ -862,6 +872,13 @@ HTML_CONTENT = """<!DOCTYPE html>
       } finally {
         btn.disabled = false;
         btn.innerText = '🚀 一键调用 ComfyUI 渲染生成';
+      }
+    }
+
+    function openPreviewInNewTab() {
+      const img = document.getElementById('resultImage');
+      if (img && img.src) {
+        window.open(img.src);
       }
     }
 
