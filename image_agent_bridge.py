@@ -659,7 +659,7 @@ def apply_to_qwen_workflow(params, saved_image_filename=None):
         for nid in graph:
             if graph[nid].get("class_type") == "LoraLoaderModelOnly":
                 lname = graph[nid].get("inputs", {}).get("lora_name", "").lower()
-                if any(x in lname for x in ("alpaca", "these", "nsfw", "anatomy")):
+                if any(x in lname for x in ("alpaca", "these", "nsfw", "anatomy", "vagina")):
                     has_anatomical = True
                     break
         if has_anatomical:

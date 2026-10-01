@@ -389,6 +389,13 @@ HTML_CONTENT = """<!DOCTYPE html>
       updateLoraCountBadge();
     }
 
+    function isQwenLoraModel(name) {
+      if (!name) return false;
+      const low = name.toLowerCase();
+      const qwenTokens = ['qwen', 'qi2', 'q21', 'alpaca', 'these', 'realstockings', 'nicegirls', 'penis', 'vagina'];
+      return qwenTokens.some(token => low.includes(token));
+    }
+
     function createLoraSelectElement(wf, selectedVal) {
       const sel = document.createElement('select');
       sel.className = 'lora-select';
@@ -401,41 +408,35 @@ HTML_CONTENT = """<!DOCTYPE html>
 
       if (!availableLorasList || !availableLorasList.length) return sel;
 
-      const groupSpecial = document.createElement('optgroup');
-      const groupAll = document.createElement('optgroup');
+      const groupQwen = document.createElement('optgroup');
+      const groupAnima = document.createElement('optgroup');
 
       if (wf === 'qwen') {
-        groupSpecial.label = '🌟 Qwen 专属增强 LoRA';
-        groupAll.label = '📦 所有可用模型';
-        availableLorasList.forEach(lora => {
-          const opt = document.createElement('option');
-          opt.value = lora;
-          opt.textContent = lora;
-          const low = lora.toLowerCase();
-          if (low.includes('qwen') || low.includes('alpaca') || low.includes('these') || low.includes('nsfw')) {
-            groupSpecial.appendChild(opt);
-          } else {
-            groupAll.appendChild(opt);
-          }
-        });
+        groupQwen.label = '🌟 Qwen 2.1 专用 LoRA (当前引擎适配)';
+        groupAnima.label = '🌸 Anima / SDXL 模型 (与 Qwen 引擎不兼容)';
       } else {
-        groupSpecial.label = '🌸 Anima 核心画风与质感 LoRA';
-        groupAll.label = '📦 所有可用模型';
-        availableLorasList.forEach(lora => {
-          const opt = document.createElement('option');
-          opt.value = lora;
-          opt.textContent = lora;
-          const low = lora.toLowerCase();
-          if (low.includes('半写实') || low.includes('realskin') || low.includes('腿部') || low.includes('detailer') || low.includes('aesthetic') || low.includes('scenery') || low.includes('colorfix') || low.includes('baka')) {
-            groupSpecial.appendChild(opt);
-          } else {
-            groupAll.appendChild(opt);
-          }
-        });
+        groupAnima.label = '🌸 Anima / SDXL 专用 LoRA (当前引擎适配)';
+        groupQwen.label = '🌟 Qwen 2.1 模型 (与 Anima 引擎不兼容)';
       }
 
-      if (groupSpecial.children.length > 0) sel.appendChild(groupSpecial);
-      if (groupAll.children.length > 0) sel.appendChild(groupAll);
+      availableLorasList.forEach(lora => {
+        const opt = document.createElement('option');
+        opt.value = lora;
+        opt.textContent = lora;
+        if (isQwenLoraModel(lora)) {
+          groupQwen.appendChild(opt);
+        } else {
+          groupAnima.appendChild(opt);
+        }
+      });
+
+      if (wf === 'qwen') {
+        if (groupQwen.children.length > 0) sel.appendChild(groupQwen);
+        if (groupAnima.children.length > 0) sel.appendChild(groupAnima);
+      } else {
+        if (groupAnima.children.length > 0) sel.appendChild(groupAnima);
+        if (groupQwen.children.length > 0) sel.appendChild(groupQwen);
+      }
 
       if (selectedVal) {
         let found = false;
@@ -599,21 +600,38 @@ HTML_CONTENT = """<!DOCTYPE html>
       num.value = parseFloat(slider.value).toFixed(2);
       num.style.cssText = 'width: 52px; padding: 3px 4px; font-size: 11px; text-align: center; margin-bottom: 0; background: #0b0d13; border: 1px solid var(--border); border-radius: 4px; color: var(--text);';
       num.oninput = function() { syncLoraNum(num); };
-
       sel.onchange = function() {
         const val = (sel.value || '').toLowerCase();
-        if (wf === 'qwen' && (val.includes('alpaca') || val.includes('these') || val.includes('nsfw'))) {
-          slider.value = 0.55;
-          num.value = '0.55';
-          const cfgInput = document.getElementById('pCFG');
-          if (cfgInput && (parseFloat(cfgInput.value) <= 1.0 || parseFloat(cfgInput.value) > 3.2)) {
-            cfgInput.value = '2.8';
+        if (wf === 'qwen') {
+          if (val.includes('alpaca') || val.includes('these') || val.includes('nsfw') || val.includes('vagina')) {
+            slider.value = 0.55;
+            num.value = '0.55';
+            const cfgInput = document.getElementById('pCFG');
+            if (cfgInput && (parseFloat(cfgInput.value) <= 1.0 || parseFloat(cfgInput.value) > 3.2)) {
+              cfgInput.value = '2.8';
+            }
+            const negBox = document.getElementById('pNegPrompt');
+            if (negBox && !negBox.value.includes('fused buttocks')) {
+              negBox.value = "fused buttocks, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, inverted anatomy, upside down anatomy, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres";
+            }
+            appendLog('🎯 [Sweet-Spot] 检测到挂载解剖优化 LoRA，已自动匹配黄金推荐参数：权重 0.55 | CFG 2.8 | 抗畸变负向提示词');
+          } else if (val.includes('realstockings')) {
+            slider.value = 0.70;
+            num.value = '0.70';
+            appendLog('🧦 [LoRA] 检测到挂载真实丝袜质感 LoRA，已设推荐权重 0.70');
+          } else if (val.includes('nicegirls')) {
+            slider.value = 0.60;
+            num.value = '0.60';
+            appendLog('✨ [LoRA] 检测到挂载审美画质增强 LoRA，已设推荐权重 0.60');
+          } else if (val.includes('posestudio') || val.includes('qi2')) {
+            slider.value = 0.60;
+            num.value = '0.60';
+            appendLog('💃 [LoRA] 检测到挂载姿势构图控制 LoRA，已设推荐权重 0.60');
+          } else if (val.includes('penis')) {
+            slider.value = 0.70;
+            num.value = '0.70';
+            appendLog('🔧 [LoRA] 检测到挂载局部结构修正 LoRA，已设推荐权重 0.70');
           }
-          const negBox = document.getElementById('pNegPrompt');
-          if (negBox && !negBox.value.includes('fused buttocks')) {
-            negBox.value = "fused buttocks, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, inverted anatomy, upside down anatomy, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres";
-          }
-          appendLog('🎯 [Sweet-Spot] 检测到挂载解剖 LoRA，已自动匹配黄金推荐参数：权重 0.55 | CFG 2.8 | 抗畸变负向提示词');
         }
       };
 

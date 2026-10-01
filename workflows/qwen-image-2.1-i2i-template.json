@@ -26,8 +26,8 @@
         "2",
         0
       ],
-      "prompt": "Remove the black underwear from the character in <image1> to reveal the lower pelvic anatomy, maintaining the original anime illustration style with consistent line art and shading. The exposed area features anatomically complete details including distinct labia majora and minora, a visible perineum, and the anus clearly positioned behind the vaginal opening. The character's thighs are pulled back to fully expose the genital region, with skin tones matching the rest of the body and soft highlights indicating smooth texture.",
-      "negative_prompt": "",
+      "prompt": "In-place photo manipulation of <image1>: remove only the string of pearl beads hanging in the cleft and the two small pink adhesive tape patches. Do NOT regenerate or smooth over the crotch. Preserve and retain the existing pink mucosal labia already visible in the lower cleft between the thighs, keeping the cleft naturally open between the labia. In the upper cleft where the top pink tape was removed near the tailbone, reveal a neat, small, smooth closed anal sphincter. Keep the rest of the image, the buttocks, lighting, and skin texture 100% identical.",
+      "negative_prompt": "fused buttocks, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, inverted anatomy, upside down anatomy, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres",
       "resolution": 1024,
       "vae": [
         "3",
@@ -42,8 +42,8 @@
   "5": {
     "class_type": "EmptyLatentImage",
     "inputs": {
-      "width": 896,
-      "height": 1152,
+      "width": 1216,
+      "height": 832,
       "batch_size": 1
     }
   },
@@ -54,9 +54,9 @@
         "10",
         0
       ],
-      "seed": 58025198826128,
+      "seed": 80556962411939,
       "steps": 40,
-      "cfg": 4.5,
+      "cfg": 2.8,
       "sampler_name": "er_sde",
       "scheduler": "beta",
       "positive": [
@@ -100,7 +100,7 @@
   "9": {
     "class_type": "LoadImage",
     "inputs": {
-      "image": "agent_ref_1790822340.jpg"
+      "image": "agent_ref_1790833715.jpg"
     }
   },
   "10": {
@@ -121,8 +121,8 @@
         "1",
         0
       ],
-      "lora_name": "Anima-半厚涂赛璐璐.safetensors",
-      "strength_model": 1.0
+      "lora_name": "NSFW_Qwen_TheseAlpacas_V2.safetensors",
+      "strength_model": 0.55
     }
   }
 }
