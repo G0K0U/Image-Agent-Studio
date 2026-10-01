@@ -65,13 +65,12 @@ HTML_CONTENT = r"""<!DOCTYPE html>
     button:hover { background: var(--primary-hover); }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-generate { background: var(--accent); margin-top: 10px; font-size: 15px; }
-    .btn-generate:hover { background: var(--accent-hover); }
-    .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .param-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
     .param-item label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
     .param-item input, .param-item select { margin-bottom: 0; }
     .status-box { background: #0b0d13; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; max-height: 220px; overflow-y: auto; color: #cbd5e1; }
     .preview-area { position: sticky; top: 20px; }
-    .preview-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 720px; background: #0b0d13; border: 2px dashed var(--border); border-radius: 12px; overflow: hidden; position: relative; padding: 16px; }
+    .preview-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 580px; background: #0b0d13; border: 2px dashed var(--border); border-radius: 12px; overflow: hidden; position: relative; padding: 16px; }
     .preview-img { max-width: 100%; max-height: 820px; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); cursor: pointer; }
     .placeholder { color: var(--muted); text-align: center; }
     .spinner { border: 4px solid #232838; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 16px; }
@@ -110,7 +109,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
           <div class="card-title" style="margin: 0;">🤖 Prompt Instruction / 自然语言指令 (提示词增强源)</div>
           <span id="planStatusBadge" style="font-size: 11px; color: #94a3b8;">等待指令增强</span>
         </div>
-        <textarea id="instruction" rows="3" placeholder="输入自然语言指令（例如：掀开中间的布料 露出清晰私处和屁眼 其余保持不变...）" oninput="markInstructionDirty()"></textarea>
+        <textarea id="instruction" rows="5" style="min-height: 120px; font-size: 13.5px; line-height: 1.5; resize: vertical;" placeholder="输入自然语言指令（例如：掀开中间的布料 露出清晰私处和屁眼 其余保持不变...）" oninput="markInstructionDirty()"></textarea>
         
         <div style="margin-bottom: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -171,8 +170,12 @@ HTML_CONTENT = r"""<!DOCTYPE html>
             <input type="number" id="pCFG" step="0.1">
           </div>
           <div class="param-item">
-            <label id="lblRatioOrDenoise">Aspect Ratio / 画幅比例</label>
-            <input type="text" id="pRatioOrDenoise">
+            <label id="lblDenoise">Denoise / 重绘幅度</label>
+            <input type="number" id="pDenoise" step="0.01" min="0.05" max="1.0" placeholder="0.55" title="图生图重绘去噪幅度：0.35-0.45微调/表情；0.50-0.55换装/材质；0.60-0.70深色衣物脱衣/新增私处结构">
+          </div>
+          <div class="param-item">
+            <label id="lblWhRatio">Aspect Ratio / 画幅比例</label>
+            <input type="text" id="pWhRatio" placeholder="2:3">
           </div>
           <div class="param-item">
             <label>Seed / 随机种子 (-1 = Random)</label>
@@ -181,13 +184,13 @@ HTML_CONTENT = r"""<!DOCTYPE html>
         </div>
 
         <div style="margin-top: 10px;">
-          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">Positive Prompt / 正向提示词</label>
-          <textarea id="pPrompt" rows="4"></textarea>
+          <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">Positive Prompt / 正向提示词 (已由 Agent 视觉增强扩展)</label>
+          <textarea id="pPrompt" rows="8" style="min-height: 190px; font-size: 13.5px; line-height: 1.5; resize: vertical;"></textarea>
         </div>
 
         <div id="negPromptSection" style="margin-top: 5px;">
-          <label id="lblNegPrompt" style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">Negative Prompt / 负向提示词</label>
-          <textarea id="pNegPrompt" rows="3"></textarea>
+          <label id="lblNegPrompt" style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">Negative Prompt / 负向提示词 (排斥项与防抹平标记)</label>
+          <textarea id="pNegPrompt" rows="4" style="min-height: 95px; font-size: 13px; line-height: 1.4; resize: vertical;"></textarea>
         </div>
 
         <div id="multiLoraSection" style="margin-top: 12px; padding: 12px; background: rgba(99, 102, 241, 0.06); border: 1px solid rgba(99, 102, 241, 0.22); border-radius: 8px;">
@@ -197,7 +200,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
               <span id="loraCountBadge" class="badge" style="font-size: 10px; padding: 1px 7px;">0 Active</span>
             </div>
             <div style="display: flex; gap: 6px; align-items: center;">
-              <button type="button" onclick="loadSweetSpotPreset()" style="width: auto; padding: 5px 10px; font-size: 11px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 4px; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;" title="一键载入实测验证的黄金甜点参数（LoRA 0.55、CFG 2.8、er_sde/beta 及专属抗畸变负向提示词）">
+              <button type="button" onclick="loadSweetSpotPreset()" style="width: auto; padding: 5px 10px; font-size: 11px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 4px; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;" title="一键载入实测验证的黄金甜点参数（LoRA 0.65/0.55、CFG 2.8、er_sde/beta 及专属抗畸变负向提示词）">
                 <span>🎯 载入实测甜点推荐</span>
               </button>
               <button type="button" onclick="addLoraRow()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #4f46e5; border-radius: 4px; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;">
@@ -220,15 +223,10 @@ HTML_CONTENT = r"""<!DOCTYPE html>
           <button id="btnStop" type="button" onclick="stopGenerate()" style="width: auto; padding: 0 16px; background: #ef444422; color: #f87171; border: 1px solid #ef444444; border-radius: 8px; font-weight: 600; cursor: pointer; display: none;" title="强制中止当前 ComfyUI 生成任务">⏹️ 停止</button>
         </div>
       </div>
-
-      <div class="card">
-        <div class="card-title">📜 Execution Logs / 实时调度日志</div>
-        <div class="status-box" id="logBox">[System] Image Agent Studio Ready.</div>
-      </div>
     </div>
 
     <div class="preview-area">
-      <div class="card" style="height: 100%; display: flex; flex-direction: column;">
+      <div class="card" style="display: flex; flex-direction: column;">
         <div class="card-title">
           <span>🖼️ Generation Preview / 成图预览</span>
           <div style="display: flex; align-items: center; gap: 8px;">
@@ -239,12 +237,20 @@ HTML_CONTENT = r"""<!DOCTYPE html>
         </div>
         <div class="preview-container">
           <div id="placeholderText" class="placeholder">
-            <svg style="width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            <svg style="width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
             <p>Enter instructions or upload a reference image</p>
             <p style="font-size: 11px; margin-top: 4px; color: #64748b;">GPU will render with 100% dedicated VRAM</p>
           </div>
           <img id="resultImage" class="preview-img" style="display: none;" onclick="window.open(this.src)">
         </div>
+      </div>
+
+      <div class="card" style="margin-top: 14px;">
+        <div class="card-title">
+          <span>📜 Execution Logs / 实时调度日志</span>
+          <button type="button" style="width: auto; padding: 2px 8px; font-size: 11px; background: transparent; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;" onclick="document.getElementById('logBox').innerText = '[System] Log cleared.'">清空</button>
+        </div>
+        <div class="status-box" id="logBox" style="max-height: 220px; min-height: 120px;">[System] Image Agent Studio Ready.</div>
       </div>
     </div>
   </div>
@@ -695,32 +701,40 @@ HTML_CONTENT = r"""<!DOCTYPE html>
           negBox.value += ', ' + sweetNeg;
         }
 
-        // 3. Ensure Qwen_TheseAlpacas_V2 is loaded with verified sweet spot strength 0.55
+        const denoiseEl = document.getElementById('pDenoise');
+        if (denoiseEl) denoiseEl.value = '0.65';
+        const whEl = document.getElementById('pWhRatio');
+        if (whEl && !whEl.value) whEl.value = '2:3';
+
+        // 3. Ensure Anatomical LoRA is loaded with verified sweet spot strength
         const rows = document.querySelectorAll('.lora-row');
-        let hasAlpaca = false;
+        let hasNsfw = false;
         rows.forEach(r => {
           const sel = r.querySelector('.lora-select');
           const num = r.querySelector('.lora-num');
           const slider = r.querySelector('.lora-slider');
           const chk = r.querySelector('.lora-enable-chk');
-          if (sel && (sel.value.includes('Alpaca') || sel.value.includes('NSFW') || sel.value.includes('These'))) {
-            hasAlpaca = true;
-            if (num) num.value = '0.55';
-            if (slider) slider.value = 0.55;
+          if (sel && (sel.value.includes('NSFW') || sel.value.includes('Alpaca') || sel.value.includes('These'))) {
+            hasNsfw = true;
+            const strVal = sel.value.includes('Alpaca') ? '0.55' : '0.65';
+            if (num) num.value = strVal;
+            if (slider) slider.value = parseFloat(strVal);
             if (chk) chk.checked = true;
           }
         });
-        if (!hasAlpaca) {
-          addLoraRow('NSFW_Qwen_TheseAlpacas_V2.safetensors', 0.55, true);
+        if (!hasNsfw) {
+          const pref = availableLorasList.find(x => x.includes('NSFW Qwen Lora')) || 'NSFW Qwen Lora.safetensors';
+          addLoraRow(pref, 0.65, true);
         }
         updateLoraCountBadge();
 
-        appendLog('🎯 [Sweet-Spot] 已载入 Qwen 解剖优化黄金甜点配置：LoRA 0.55 | CFG 2.8 | er_sde/beta | 40步 | 专属抗畸变负向提示词');
+        appendLog('🎯 [Sweet-Spot] 已载入 Qwen 解剖优化黄金甜点配置：NSFW LoRA 0.65 | CFG 2.8 | Denoise 0.65 | er_sde/beta | 40步 | 专属抗畸变负向提示词');
       } else {
         // Anima Semi-realistic sweet spot
         document.getElementById('pSteps').value = 30;
         document.getElementById('pCFG').value = 4.5;
-        document.getElementById('pRatioOrDenoise').value = 0.50;
+        const denoiseEl = document.getElementById('pDenoise');
+        if (denoiseEl) denoiseEl.value = '0.50';
         const rows = document.querySelectorAll('.lora-row');
         let hasSemi = false;
         rows.forEach(r => {
@@ -940,21 +954,21 @@ HTML_CONTENT = r"""<!DOCTYPE html>
       const wf = document.getElementById('wfSelect').value;
       const pill = document.getElementById('curEnginePill');
       const negSec = document.getElementById('negPromptSection');
-      const lbl = document.getElementById('lblRatioOrDenoise');
-
       const negLbl = document.getElementById('lblNegPrompt');
-      negSec.style.display = 'block';
+      if (negSec) negSec.style.display = 'block';
 
       if (wf === 'qwen') {
-        pill.innerText = 'Qwen-Image 2.1 (进阶)';
-        pill.className = 'workflow-pill pill-qwen';
+        if (pill) {
+          pill.innerText = 'Qwen-Image 2.1 (进阶)';
+          pill.className = 'workflow-pill pill-qwen';
+        }
         if (negLbl) negLbl.innerText = 'Negative Prompt / 负向提示词 (当 CFG > 1.0 时生效，用于排除平滑皮肤/残缺解剖)';
-        lbl.innerText = '画幅比例 (Ratio: 16:9, 2:3, 1:1)';
       } else {
-        pill.innerText = 'Anima AIO Yuri (SDXL)';
-        pill.className = 'workflow-pill pill-anima';
+        if (pill) {
+          pill.innerText = 'Anima AIO Yuri (SDXL)';
+          pill.className = 'workflow-pill pill-anima';
+        }
         if (negLbl) negLbl.innerText = 'Negative Prompt / 负向提示词';
-        lbl.innerText = '去噪强度 (Denoise)';
       }
       fetchStatus();
     }
@@ -1005,8 +1019,13 @@ HTML_CONTENT = r"""<!DOCTYPE html>
       }
       if (data.steps !== undefined) document.getElementById('pSteps').value = data.steps;
       if (data.cfg !== undefined) document.getElementById('pCFG').value = data.cfg;
-      if (data.wh_ratio !== undefined || data.denoise !== undefined) {
-        document.getElementById('pRatioOrDenoise').value = data.wh_ratio || data.denoise;
+      if (data.wh_ratio !== undefined) {
+        const whEl = document.getElementById('pWhRatio');
+        if (whEl) whEl.value = data.wh_ratio;
+      }
+      if (data.denoise !== undefined) {
+        const denoiseEl = document.getElementById('pDenoise');
+        if (denoiseEl) denoiseEl.value = data.denoise;
       }
       if (data.seed !== undefined) document.getElementById('pSeed').value = data.seed;
       if (data.active_loras) {
@@ -1153,7 +1172,9 @@ HTML_CONTENT = r"""<!DOCTYPE html>
         negative_prompt: document.getElementById('pNegPrompt').value,
         steps: parseInt(document.getElementById('pSteps').value || (wf === 'qwen' ? 40 : 28)),
         cfg: parseFloat(document.getElementById('pCFG').value || (wf === 'qwen' ? 1.0 : 4.0)),
-        ratio_or_denoise: document.getElementById('pRatioOrDenoise').value,
+        denoise: parseFloat((document.getElementById('pDenoise') ? document.getElementById('pDenoise').value : '') || (wf === 'qwen' ? 0.55 : 0.50)),
+        wh_ratio: (document.getElementById('pWhRatio') ? document.getElementById('pWhRatio').value : '2:3') || '2:3',
+        ratio_or_denoise: (document.getElementById('pWhRatio') ? document.getElementById('pWhRatio').value : '2:3') || '2:3',
         seed: document.getElementById('pSeed').value,
         loras: collectActiveLorasFromUI()
       };
@@ -1301,6 +1322,8 @@ def get_status_for_workflow(wf="qwen", has_image=None):
                     inp = d["6"].get("inputs", {})
                     status["steps"] = inp.get("steps", 40)
                     status["cfg"] = inp.get("cfg", 1.0)
+                    if "denoise" in inp:
+                        status["denoise"] = float(inp.get("denoise", 0.55))
                     status["seed"] = inp.get("seed", -1)
                 if "5" in d:
                     w = d["5"].get("inputs", {}).get("width", 832)
@@ -1611,6 +1634,12 @@ class StudioHandler(BaseHTTPRequestHandler):
                         ks = graph["6"]["inputs"]
                         if data.get("steps"): ks["steps"] = int(data["steps"])
                         if data.get("cfg"): ks["cfg"] = float(data["cfg"])
+                        if data.get("denoise") is not None:
+                            try: ks["denoise"] = float(data["denoise"])
+                            except (ValueError, TypeError): pass
+                        elif data.get("ratio_or_denoise") and not any(c in str(data.get("ratio_or_denoise")) for c in [":", "x", "/"]):
+                            try: ks["denoise"] = float(data["ratio_or_denoise"])
+                            except (ValueError, TypeError): pass
                         if data.get("seed") and str(data["seed"]).strip() != "-1":
                             try: cur_seed = int(data["seed"])
                             except ValueError: pass
@@ -1620,7 +1649,7 @@ class StudioHandler(BaseHTTPRequestHandler):
                             ks["scheduler"] = "beta"
                         
                     # Handle resolution from ratio
-                    ratio = data.get("ratio_or_denoise", "2:3")
+                    ratio = data.get("wh_ratio") or data.get("ratio_or_denoise", "2:3")
                     if ratio in image_agent_bridge.WH_RATIO_MAP and "5" in graph:
                         w, h = image_agent_bridge.WH_RATIO_MAP[ratio]
                         graph["5"]["inputs"]["width"] = w
@@ -1683,7 +1712,10 @@ class StudioHandler(BaseHTTPRequestHandler):
                         ks = graph["118"]["inputs"]
                         if data.get("steps"): ks["steps"] = int(data["steps"])
                         if data.get("cfg"): ks["cfg"] = float(data["cfg"])
-                        if data.get("ratio_or_denoise"):
+                        if data.get("denoise") is not None:
+                            try: ks["denoise"] = float(data["denoise"])
+                            except (ValueError, TypeError): pass
+                        elif data.get("ratio_or_denoise"):
                             try: ks["denoise"] = float(data["ratio_or_denoise"])
                             except ValueError: pass
                         

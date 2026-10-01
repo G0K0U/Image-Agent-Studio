@@ -175,24 +175,29 @@ def start_heretic():
     cmd = [
         exe,
         "-m", model,
-        "-c", str(cfg.get("heretic_ctx_size", 8192)),
+        "-c", "4096",
         "-n", "1024",
-        "-ngl", str(cfg.get("heretic_gpu_layers", 99)),
+        "-b", "256",
+        "-ngl", "999",
         "--host", "127.0.0.1",
         "--port", str(port),
-        "--no-ui"
+        "--no-ui",
+        "--no-think"
     ]
     
-    if cfg.get("heretic_model_name"):
-        cmd.extend(["-a", cfg["heretic_model_name"]])
-
     if is_kvmem:
-        cmd.extend(["--kvmem-gen-reserve", "1024"])
+        cmd.extend([
+            "--kvmem-gen-reserve", "1024",
+            "-ctk", "q5_0",
+            "-ctv", "q5_0",
+            "--spec-type", "draft-mtp",
+            "--spec-draft-n-max", "2"
+        ])
     elif cfg.get("heretic_threads"):
         cmd.extend(["-t", str(cfg["heretic_threads"])])
 
     if cfg.get("heretic_mmproj_path") and os.path.exists(cfg["heretic_mmproj_path"]):
-        cmd.extend(["--mmproj", cfg["heretic_mmproj_path"], "--mmproj-offload"])
+        cmd.extend(["--mmproj", cfg["heretic_mmproj_path"], "--no-mmproj-offload", "--image-max-tokens", "512"])
 
     print(f"[Bridge] Starting local LLM server on port {port}: {' '.join(cmd)}")
     subprocess.Popen(
@@ -220,6 +225,250 @@ def start_heretic():
         print(f"[Bridge] Local LLM Server on port {port} is online!")
     else:
         print(f"[Bridge] Warning: Local LLM health check on port {port} timed out, proceeding anyway...")
+
+LORA_SYNONYMS = {
+    "semi_realistic": ["半写实", "semi-realistic", "semi_realistic", "photorealistic"],
+    "realskin": ["realskin", "真实皮肤", "skin"],
+    "leg_detail": ["腿部", "leg_detail", "stocking", "pantyhose", "丝袜", "黑丝"],
+    "detailer": ["detailer", "细节", "微细节"],
+    "aesthetic": ["aesthetic", "美学", "超清"],
+    "scenery": ["scenery", "风景", "背景", "background"],
+    "baka": ["baka", "动漫皮肤"],
+    "colorfix": ["colorfix", "色彩修复"]
+}
+
+def matches_lora(query, target):
+    q = str(query).lower()
+    t = str(target).lower()
+    if q == t or q in t or t in q:
+        return True
+    for canon, syns in LORA_SYNONYMS.items():
+        if any(s in q for s in syns) and any(s in t for s in syns):
+            return True
+    return False
+
+def normalize_loras_list(loras_spec):
+    normalized = []
+    if isinstance(loras_spec, list):
+        for item in loras_spec:
+            if isinstance(item, dict):
+                name = item.get("name") or item.get("lora") or ""
+                st = item.get("strength") if item.get("strength") is not None else item.get("strength_model", 0.8)
+                enabled = item.get("enabled", True)
+                if name and str(name).lower() not in ("none", "false", "0", ""):
+                    try:
+                        st = float(st)
+                    except (ValueError, TypeError):
+                        st = 0.8
+                    normalized.append({"name": str(name).strip(), "strength": round(st, 2), "enabled": bool(enabled)})
+            elif isinstance(item, str) and item.strip() and item.lower() not in ("none", "false", "0"):
+                normalized.append({"name": item.strip(), "strength": 0.8, "enabled": True})
+    elif isinstance(loras_spec, dict):
+        for k, v in loras_spec.items():
+            if k and str(k).lower() not in ("none", "false", "0", ""):
+                try:
+                    st = float(v)
+                except (ValueError, TypeError):
+                    st = 0.8
+                normalized.append({"name": str(k).strip(), "strength": round(st, 2), "enabled": True})
+    elif isinstance(loras_spec, str) and loras_spec.strip() and loras_spec.lower() not in ("none", "false", "0"):
+        normalized.append({"name": loras_spec.strip(), "strength": 0.8, "enabled": True})
+    return normalized
+
+def refine_planned_params(res_obj, instruction="", image_path=None, workflow="qwen"):
+    """
+    Empirically calibrates and fine-tunes all parameters (CFG, steps, denoise, wh_ratio, seed,
+    negative prompt) and resolves multi-LoRA stacking strictly according to user instruction
+    and reference image characteristics.
+    """
+    if not isinstance(res_obj, dict):
+        res_obj = {}
+
+    prompt_text = res_obj.get("rewritten_prompt") or res_obj.get("prompt", "")
+    sig_text = f"{instruction} {prompt_text}".lower()
+    is_i2i = bool(image_path) or any(k in sig_text for k in ["<image1>", "image1", "参考图", "底图", "图生图", "原图", "本图", "这张图"])
+
+    if workflow == "qwen":
+        # 1. Concept detection
+        anatomy_kw = [
+            "私处", "阴部", "阴唇", "阴道", "阴蒂", "屁眼", "肛门", "生殖器", "小穴", "露穴",
+            "裸露", "脱下", "褪下", "掀开", "crotch", "vulva", "labia", "vagina", "anus",
+            "sphincter", "pussy", "clitoris", "naked", "nude", "undressed", "cleft", "pubic",
+            "bare crotch", "genitalia", "cameltoe"
+        ]
+        has_anatomy = any(k in sig_text for k in anatomy_kw)
+
+        stockings_kw = [
+            "黑丝", "白丝", "丝袜", "连裤袜", "吊带袜", "网袜", "裤袜", "薄袜",
+            "stocking", "stockings", "pantyhose", "tights", "legwear", "thighhigh", "garter"
+        ]
+        has_stockings = any(k in sig_text for k in stockings_kw)
+
+        realism_kw = [
+            "nicegirls", "亚洲脸", "东亚", "少女脸", "精致五官", "coser", "cosplay摄影", "真人写真",
+            "真人摄影", "三次元", "真人化", "photorealistic portrait", "asian face", "asian girl"
+        ]
+        has_realism = any(k in sig_text for k in realism_kw)
+
+        anime_kw = [
+            "动漫", "二次元", "日漫", "赛璐璐", "插画", "手绘", "漫画", "anime", "manga",
+            "cel shading", "2d illustration"
+        ]
+        has_anime = any(k in sig_text for k in anime_kw) and not has_realism
+
+        pose_kw = [
+            "改姿势", "换姿势", "改变姿势", "站姿", "坐姿", "侧卧", "回眸", "抬腿", "跪姿",
+            "趴着", "pose", "posture", "dynamic pose"
+        ]
+        has_pose = any(k in sig_text for k in pose_kw)
+
+        male_kw = ["丁丁", "阴茎", "小一点", "缩小", "penis", "smaller penis"]
+        has_male = any(k in sig_text for k in male_kw)
+
+        # 2. Existing loras analysis
+        existing_loras = normalize_loras_list(res_obj.get("loras", []))
+        if any(any(x in l.get("name", "").lower() for x in ("alpaca", "these", "nsfw", "anatomy", "vagina")) for l in existing_loras):
+            has_anatomy = True
+        if any("stocking" in l.get("name", "").lower() for l in existing_loras):
+            has_stockings = True
+        if any("nicegirls" in l.get("name", "").lower() for l in existing_loras):
+            has_realism = True
+        if any("anime" in l.get("name", "").lower() for l in existing_loras):
+            has_anime = True
+        if any("pose" in l.get("name", "").lower() for l in existing_loras):
+            has_pose = True
+        if any("penis" in l.get("name", "").lower() for l in existing_loras):
+            has_male = True
+
+        # Build fine-tuned LoRA list
+        final_loras = []
+        if has_anatomy:
+            if any(k in sig_text for k in ["alpaca", "these", "thesealpacas", "羊驼"]):
+                final_loras.append({"name": "NSFW_Qwen_TheseAlpacas_V2.safetensors", "strength": 0.55, "enabled": True})
+            elif any(k in sig_text for k in ["vagina_v1", "qwen21_vagina"]):
+                final_loras.append({"name": "qwen21_vagina_v1.safetensors", "strength": 0.65, "enabled": True})
+            else:
+                final_loras.append({"name": "NSFW Qwen Lora.safetensors", "strength": 0.65, "enabled": True})
+
+        if has_stockings:
+            final_loras.append({"name": "RealStockings_QWEN.safetensors", "strength": 0.65, "enabled": True})
+
+        if has_realism:
+            final_loras.append({"name": "nicegirls_qwen12.safetensors", "strength": 0.50, "enabled": True})
+
+        if has_anime:
+            final_loras.append({"name": "Qwen2.1_Anime_consistency.safetensors", "strength": 0.65, "enabled": True})
+
+        if has_pose:
+            final_loras.append({"name": "VNCCS_QI2_PoseStudioV1.1.safetensors", "strength": 0.60, "enabled": True})
+
+        if has_male:
+            final_loras.append({"name": "Q21 make the penis small.safetensors", "strength": 0.60, "enabled": True})
+
+        # Keep any custom user-specified LoRAs
+        for el in existing_loras:
+            el_name = el.get("name", "")
+            if not any(matches_lora(el_name, fl["name"]) for fl in final_loras):
+                final_loras.append(el)
+
+        res_obj["loras"] = final_loras
+
+        # 3. Fine-tune CFG and Steps
+        if has_anatomy:
+            res_obj["cfg"] = 2.8
+            res_obj["steps"] = 40
+        elif has_realism or has_anime:
+            try:
+                c = float(res_obj.get("cfg", 2.0))
+                res_obj["cfg"] = 2.0 if c < 1.5 else c
+            except (ValueError, TypeError):
+                res_obj["cfg"] = 2.0
+            res_obj["steps"] = int(res_obj.get("steps", 35))
+        else:
+            res_obj["cfg"] = 1.0
+            res_obj["steps"] = int(res_obj.get("steps", 35))
+
+        # 4. Fine-tune Negative Prompt
+        sweet_neg = "smooth crotch, featureless crotch, barbie doll crotch, flat crotch, missing genitalia, erased genitalia, blurry crotch, censored anatomy, blank skin, inverted anatomy, upside down genitals, labia at top, vaginal opening at top, fused buttocks, merged cleft, sealed cleft, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres"
+        cur_neg = res_obj.get("negative_prompt", "")
+        if has_anatomy:
+            if not cur_neg or "smooth crotch" not in cur_neg:
+                res_obj["negative_prompt"] = (cur_neg + ", " + sweet_neg).strip(", ") if cur_neg else sweet_neg
+        elif has_anime:
+            if not cur_neg:
+                res_obj["negative_prompt"] = "3d, realistic, photo, ugly, deformed, blurry, lowres"
+
+        # 5. Fine-tune Denoise
+        user_denoise = None
+        import re
+        dm = re.search(r'(?:denoise|重绘幅度|重绘)\s*(?:=|:|为)?\s*(0\.\d+)', sig_text)
+        if dm:
+            try:
+                user_denoise = float(dm.group(1))
+            except ValueError:
+                pass
+
+        if user_denoise is not None:
+            res_obj["denoise"] = user_denoise
+        elif is_i2i:
+            undress_kw = ["脱下", "褪下", "掀开", "拉下", "去掉", "消除", "深色", "布料", "内裤", "短裤", "裙子", "remove", "lift", "undress", "crotch fabric", "dark grey fabric", "panel"]
+            if any(k in sig_text for k in undress_kw):
+                res_obj["denoise"] = 0.65
+            elif has_anatomy or has_pose:
+                res_obj["denoise"] = 0.62
+            elif has_stockings or any(k in sig_text for k in ["换装", "材质", "换衣服", "改画风", "风格", "服装", "衣服", "穿上", "摄影", "写真", "cosplay"]):
+                res_obj["denoise"] = 0.52
+            elif any(k in sig_text for k in ["表情", "眼神", "微调", "发色", "发型"]):
+                res_obj["denoise"] = 0.40
+            else:
+                try:
+                    res_obj["denoise"] = float(res_obj.get("denoise", 0.55))
+                except (ValueError, TypeError):
+                    res_obj["denoise"] = 0.55
+        else:
+            res_obj["denoise"] = 1.0
+
+        # 6. Aspect Ratio
+        ratio_kw = ["16:9", "9:16", "1:1", "2:3", "3:2", "3:4", "4:3", "横屏", "竖屏", "正方形", "wide", "portrait", "landscape"]
+        user_specified_ratio = any(k in sig_text for k in ratio_kw)
+
+        if is_i2i and not user_specified_ratio:
+            try:
+                from PIL import Image
+                with Image.open(image_path) as im:
+                    iw, ih = im.size
+                    target_ratio = iw / ih
+                    res_obj["wh_ratio"] = min(WH_RATIO_MAP.keys(), key=lambda r: abs((WH_RATIO_MAP[r][0] / WH_RATIO_MAP[r][1]) - target_ratio))
+            except Exception:
+                if not res_obj.get("wh_ratio"):
+                    res_obj["wh_ratio"] = "2:3"
+        elif not res_obj.get("wh_ratio"):
+            res_obj["wh_ratio"] = "2:3" if is_i2i else "16:9"
+
+    else:
+        # Anima workflow
+        existing_loras = res_obj.get("loras", {})
+        if not isinstance(existing_loras, dict):
+            existing_loras = {}
+        
+        has_realism = any(k in sig_text for k in ["半写实", "写实", "真人", "real", "photorealistic"])
+        if has_realism:
+            existing_loras["semi_realistic"] = 0.70
+            existing_loras["RealSkin"] = 0.50
+            existing_loras["detailer"] = 0.35
+            existing_loras["aesthetic"] = 0.35
+            res_obj["cfg"] = 4.5
+            res_obj["steps"] = 30
+            res_obj["denoise"] = 0.50
+        else:
+            existing_loras["aesthetic"] = 0.35
+            existing_loras["detailer"] = 0.35
+            res_obj["cfg"] = 4.0
+            res_obj["steps"] = 28
+            res_obj["denoise"] = 0.50
+        res_obj["loras"] = existing_loras
+
+    return res_obj
 
 def query_heretic(instruction, image_path=None, workflow="qwen"):
     cfg = get_config()
@@ -475,99 +724,8 @@ def query_heretic(instruction, image_path=None, workflow="qwen"):
             else:
                 raise je
 
-    # Normalize LoRAs structure
-    if "loras" in res_obj:
-        res_obj["loras"] = normalize_loras_list(res_obj["loras"])
-    elif "lora" in res_obj:
-        res_obj["loras"] = normalize_loras_list([{"name": res_obj["lora"], "strength": res_obj.get("lora_strength", 0.8)}])
-    else:
-        res_obj["loras"] = []
-
-    # If anatomical LoRA is planned for Qwen, ensure CFG and LoRA strength hit sweet-spot
-    if workflow == "qwen":
-        has_anatomy = any(any(x in l.get("name", "").lower() for x in ("alpaca", "these", "nsfw", "anatomy", "vagina")) for l in res_obj["loras"])
-        try:
-            cur_cfg = float(res_obj.get("cfg", 1.0))
-        except (ValueError, TypeError):
-            cur_cfg = 1.0
-        if has_anatomy:
-            if cur_cfg < 2.2 or cur_cfg > 3.2:
-                print(f"[Bridge] Auto-adjusting Qwen CFG from {cur_cfg} to 2.8 (empirically verified sweet-spot)")
-                res_obj["cfg"] = 2.8
-            for l in res_obj.get("loras", []):
-                lname = l.get("name", "").lower()
-                if "vagina" in lname:
-                    cur_st = float(l.get("strength", 0.65))
-                    if cur_st < 0.50 or cur_st > 0.85:
-                        l["strength"] = 0.65
-                elif any(x in lname for x in ("alpaca", "these", "nsfw")):
-                    cur_st = float(l.get("strength", 0.55))
-                    if cur_st < 0.45 or cur_st > 0.75:
-                        l["strength"] = 0.55
-                elif "stocking" in lname:
-                    cur_st = float(l.get("strength", 0.65))
-                    if cur_st < 0.50 or cur_st > 0.85:
-                        l["strength"] = 0.65
-                elif "nicegirls" in lname:
-                    cur_st = float(l.get("strength", 0.55))
-                    if cur_st < 0.45 or cur_st > 0.75:
-                        l["strength"] = 0.55
-            # Provide anti-distortion, anti-inversion, and anti-erasure negative prompt
-            sweet_neg = "smooth crotch, featureless crotch, barbie doll crotch, flat crotch, missing genitalia, erased genitalia, blurry crotch, censored anatomy, blank skin, inverted anatomy, upside down genitals, labia at top, vaginal opening at top, fused buttocks, merged cleft, sealed cleft, giant single balloon buttock, giant oversized genitalia, massive fan wrinkles, exaggerated wrinkled skin, wrinkled buttocks, gaping orifice, swollen body, realistic hyper-wrinkled skin, ugly, deformed, mutated crotch, extra limbs, underwear covering, bar censor, mosaic censor, lowres"
-            cur_neg = res_obj.get("negative_prompt", "")
-            if not cur_neg or "smooth crotch" not in cur_neg:
-                res_obj["negative_prompt"] = (cur_neg + ", " + sweet_neg).strip(", ") if cur_neg else sweet_neg
-
+    res_obj = refine_planned_params(res_obj, instruction=instruction, image_path=image_path, workflow=workflow)
     return res_obj
-
-LORA_SYNONYMS = {
-    "semi_realistic": ["半写实", "semi-realistic", "semi_realistic", "photorealistic"],
-    "realskin": ["realskin", "真实皮肤", "skin"],
-    "leg_detail": ["腿部", "leg_detail", "stocking", "pantyhose", "丝袜", "黑丝"],
-    "detailer": ["detailer", "细节", "微细节"],
-    "aesthetic": ["aesthetic", "美学", "超清"],
-    "scenery": ["scenery", "风景", "背景", "background"],
-    "baka": ["baka", "动漫皮肤"],
-    "colorfix": ["colorfix", "色彩修复"]
-}
-
-def matches_lora(query, target):
-    q = str(query).lower()
-    t = str(target).lower()
-    if q == t or q in t or t in q:
-        return True
-    for canon, syns in LORA_SYNONYMS.items():
-        if any(s in q for s in syns) and any(s in t for s in syns):
-            return True
-    return False
-
-def normalize_loras_list(loras_spec):
-    normalized = []
-    if isinstance(loras_spec, list):
-        for item in loras_spec:
-            if isinstance(item, dict):
-                name = item.get("name") or item.get("lora") or ""
-                st = item.get("strength") if item.get("strength") is not None else item.get("strength_model", 0.8)
-                enabled = item.get("enabled", True)
-                if name and str(name).lower() not in ("none", "false", "0", ""):
-                    try:
-                        st = float(st)
-                    except (ValueError, TypeError):
-                        st = 0.8
-                    normalized.append({"name": str(name).strip(), "strength": round(st, 2), "enabled": bool(enabled)})
-            elif isinstance(item, str) and item.strip() and item.lower() not in ("none", "false", "0"):
-                normalized.append({"name": item.strip(), "strength": 0.8, "enabled": True})
-    elif isinstance(loras_spec, dict):
-        for k, v in loras_spec.items():
-            if k and str(k).lower() not in ("none", "false", "0", ""):
-                try:
-                    st = float(v)
-                except (ValueError, TypeError):
-                    st = 0.8
-                normalized.append({"name": str(k).strip(), "strength": round(st, 2), "enabled": True})
-    elif isinstance(loras_spec, str) and loras_spec.strip() and loras_spec.lower() not in ("none", "false", "0"):
-        normalized.append({"name": loras_spec.strip(), "strength": 0.8, "enabled": True})
-    return normalized
 
 def apply_qwen_loras_to_graph(graph, loras_spec):
     loras_list = normalize_loras_list(loras_spec)
@@ -732,7 +890,7 @@ def apply_to_qwen_workflow(params, saved_image_filename=None):
                 print(f"[Bridge] Auto-tuning Qwen KSampler CFG from {cfg_val} to 2.8 (sweet-spot) for anatomical LoRA")
                 cfg_val = 2.8
         ks["cfg"] = cfg_val
-        if is_i2i and "denoise" in params:
+        if "denoise" in params:
             try:
                 ks["denoise"] = float(params["denoise"])
             except (ValueError, TypeError):
